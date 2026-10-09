@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Khach hang</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+    input { padding: 6px 8px; width: 120px; }
+    button { padding: 6px 12px; cursor: pointer; }
+    code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; }
+    .tag { display: inline-block; background: #e6f0ff; padding: 2px 8px; border-radius: 10px; margin: 2px; }
+    #log { border: 1px solid #ddd; border-radius: 6px; padding: 8px; height: 320px; overflow: auto; font-family: monospace; font-size: 13px; }
+    .ok   { color: #137333; }
+    .leak { color: #fff; background: #c5221f; padding: 0 4px; }
+    .sys  { color: #666; }
+    .stat { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Tab khach hang</h1>
+  <div class="stat">Socket ID: <code id="sid">dang ket noi...</code></div>
+
+  <div class="row">
+    <input id="orderId" placeholder="Ma don, vd 1024" />
+    <button id="btnTrack">Theo doi don</button>
+    <button id="btnUntrack">Bo theo doi</button>
+  </div>
+  <div class="row">Dang theo doi: <span id="mine"><i>chua co</i></span></div>
+  <div class="row stat">
+    Da nhan: <b id="cntOk">0</b> su kien dung &nbsp;|&nbsp;
+    <b id="cntLeak" style="color:#c5221f">0</b> su kien KHONG PHAI CUA MINH
+  </div>
+
+  <div id="log"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const mine = new Set();
+    let cntOk = 0, cntLeak = 0;
+
+    // Mo trang voi ?track=1024 de tu dong theo doi khi vao
+    const autoTrack = new URLSearchParams(location.search).get('track');
+
+    function log(html, cls) {
+      const line = document.createElement('div');
+      line.className = cls;
+      line.innerHTML = `[${new Date().toLocaleTimeString()}] ${html}`;
+      $('log').prepend(line);
+    }
+    function renderMine() {
+      $('mine').innerHTML = mine.size ? [...mine].map((o) => `<span class="tag">${o}</span>`).join('') : '<i>chua co</i>';
+      document.title = mine.size ? `Khach - don ${[...mine].join(',')}` : 'ShopFast - Khach hang';
+    }
+
+    const socket = io();
+
+    socket.on('connect', () => {
+      $('sid').textContent = socket.id;
+      log(`ket noi thanh cong, id=${socket.id}`, 'sys');
+      // Socket.IO cap id MOI moi lan reconnect -> phai track lai
+      const toTrack = new Set(mine);
+      if (autoTrack) toTrack.add(autoTrack);
+      toTrack.forEach(track);
+    });
+    socket.on('disconnect', (reason) => log(`mat ket noi: ${reason}`, 'sys'));
+
+    // ===== Day la noi khach "nhan thong bao" =====
+    socket.on('order:updated', ({ orderId, status }) => {
+      if (mine.has(String(orderId))) {
+        cntOk++;
+        log(`✅ Don <b>${orderId}</b> -> ${status}`, 'ok');
+      } else {
+        cntLeak++;
+        log(`⚠️ RO RI: nhan duoc don <b>${orderId}</b> -> ${status} (minh khong theo doi don nay!)`, 'leak');
+      }
+      $('cntOk').textContent = cntOk;
+      $('cntLeak').textContent = cntLeak;
+    });
+
+    async function track(orderId) {
+      const res = await socket.emitWithAck('order:track', orderId);
+      if (res && res.ok) {
+        mine.add(String(orderId));
+        renderMine();
+        log(`gui order:track ${orderId} -> server tra ${JSON.stringify(res)}`, 'sys');
+      } else {
+        log(`order:track ${orderId} bi tu choi: ${JSON.stringify(res)}`, 'leak');
+      }
+    }
+    async function untrack(orderId) {
+      const res = await socket.emitWithAck('order:untrack', orderId).catch(() => null);
+      mine.delete(String(orderId));
+      renderMine();
+      log(`gui order:untrack ${orderId} -> ${JSON.stringify(res)}`, 'sys');
+    }
+
+    $('btnTrack').onclick = () => { const v = $('orderId').value.trim(); if (v) track(v); };
+    $('btnUntrack').onclick = () => { const v = $('orderId').value.trim(); if (v) untrack(v); };
+  </script>
+</body>
+</html>

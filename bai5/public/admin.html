@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Admin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+    input, select { padding: 6px 8px; }
+    button { padding: 6px 12px; cursor: pointer; }
+    pre { background: #f6f6f6; border: 1px solid #ddd; border-radius: 6px; padding: 10px; overflow: auto; max-height: 360px; font-size: 13px; }
+    .big { font-size: 18px; }
+    .bad { color: #c5221f; font-weight: bold; } .good { color: #137333; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Admin / He thong noi bo</h1>
+
+  <h2>1. Cap nhat trang thai don (goi notifyStatusChanged)</h2>
+  <div class="row">
+    <input id="orderId" value="1024" style="width:100px" />
+    <select id="status">
+      <option>CONFIRMED</option><option>PACKING</option><option selected>SHIPPED</option>
+      <option>DELIVERED</option><option>CANCELLED</option>
+    </select>
+    <button id="btnUpdate">PATCH /orders/:id/status</button>
+    <span id="updateRes"></span>
+  </div>
+
+  <h2>2. Trang thai ben trong server (GET /debug/state)</h2>
+  <div class="row big">
+    Bien the: <b id="variant">?</b> &nbsp;|&nbsp;
+    Socket dang ket noi: <b id="conn">?</b> &nbsp;|&nbsp;
+    <code>tracked.size</code>: <b id="size">?</b>
+  </div>
+  <div class="row"><label><input type="checkbox" id="auto" checked /> Tu lam moi moi 1s</label></div>
+  <pre id="state">...</pre>
+
+  <h2>3. Stress test: mo roi dong N ket noi lien tiep</h2>
+  <div class="row">
+    N = <input id="n" value="50" style="width:60px" />
+    <button id="btnStress">Chay</button>
+    <span id="stressRes"></span>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function refresh() {
+      const s = await fetch('/debug/state').then((r) => r.json());
+      $('variant').textContent = s.variant.toUpperCase();
+      $('conn').textContent = s.connectedSockets;
+      $('size').textContent = s.trackedSize;
+      $('state').textContent = JSON.stringify(s, null, 2);
+      return s;
+    }
+    setInterval(() => { if ($('auto').checked) refresh(); }, 1000);
+    refresh();
+
+    $('btnUpdate').onclick = async () => {
+      const id = $('orderId').value.trim();
+      const res = await fetch(`/orders/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: $('status').value }),
+      }).then((r) => r.json());
+      $('updateRes').textContent = JSON.stringify(res);
+    };
+
+    $('btnStress').onclick = async () => {
+      const n = Number($('n').value) || 50;
+      const before = (await refresh()).trackedSize;
+      $('stressRes').textContent = `dang chay ${n} vong...`;
+      for (let i = 1; i <= n; i++) {
+        const s = io({ forceNew: true, transports: ['websocket'] });
+        await new Promise((ok) => s.on('connect', ok));
+        await s.emitWithAck('order:track', `stress-${i}`);
+        s.disconnect();
+      }
+      await new Promise((ok) => setTimeout(ok, 300));
+      const after = (await refresh()).trackedSize;
+      const leaked = after - before;
+      $('stressRes').innerHTML = `tracked.size: truoc=${before}, sau=${after} -> ` +
+        (leaked > 0 ? `<span class="bad">RO RI ${leaked} entry</span>` : `<span class="good">SACH (khong ro ri)</span>`);
+    };
+  </script>
+</body>
+</html>
