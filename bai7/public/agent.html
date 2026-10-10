@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Nhân viên CSKH</title>
+  <link rel="stylesheet" href="/chat.css" />
+  <style>
+    body { height: 100vh; display: flex; flex-direction: column; }
+    header { background: #263238; color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+    .layout { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+    aside { border-right: 1px solid var(--line); overflow-y: auto; background: #fff; }
+    aside h3 { font-size: 13px; text-transform: uppercase; color: var(--muted); margin: 14px 12px 6px; }
+    .item { padding: 10px 12px; border-bottom: 1px solid #f2f2f2; cursor: pointer; }
+    .item:hover { background: #fafafa; } .item.selected { background: #fff3ef; }
+    .item .top { display: flex; align-items: center; gap: 6px; } .item .top b { flex: 1; }
+    .item .preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .item .typing-dot { font-size: 11px; color: var(--ok); }
+    .empty { padding: 10px 12px; color: var(--muted); font-size: 13px; }
+    main { display: flex; flex-direction: column; min-height: 0; }
+    .chat-head { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; background: #fff; }
+    .chat-head .title { flex: 1; }
+    #placeholder { margin: auto; color: var(--muted); }
+    @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } aside { max-height: 40vh; } }
+  </style>
+</head>
+<body>
+  <header><span class="dot" id="conn"></span><b>CSKH ShopFast</b><span id="who" style="opacity:.8"></span></header>
+  <div class="layout">
+    <aside>
+      <h3>Hàng chờ</h3><div id="queue"></div>
+      <h3>Đang phụ trách</h3><div id="mine"></div>
+    </aside>
+    <main>
+      <div id="placeholder">Chọn một phiên trong hàng chờ để bắt đầu hỗ trợ</div>
+      <div id="chat" style="display:none;flex:1;flex-direction:column;min-height:0">
+        <div class="chat-head">
+          <div class="title"><b id="chatTitle"></b><div class="muted" style="font-size:12px;color:#777" id="chatSub"></div></div>
+          <button class="light" id="leave">Rời phiên (trả về hàng chờ)</button>
+          <button class="light" id="closeChat">Kết thúc</button>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="typing" id="typing"></div>
+        <div class="composer">
+          <textarea id="input" placeholder="Trả lời khách… (Enter để gửi)"></textarea>
+          <div class="error" id="error"></div>
+          <div class="row"><span class="counter" id="counter">0/2.000</span><button class="primary" id="send">Gửi</button></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/chat-common.js"></script>
+  <script>
+    const C = window.ChatCommon;
+    const $ = (id) => document.getElementById(id);
+    const agentId = new URLSearchParams(location.search).get("user") || "an";
+    $("who").textContent = `· nhân viên ${agentId}`;
+
+    const socket = io({ auth: { token: `agent:${agentId}` }, transports: ["websocket"] });
+    const typing = C.typingController(socket);
+
+    let sessions = [];                 // tu queue:updated (cac phien chua dong)
+    let selected = null;               // sessionId dang mo
+    const timelines = new Map();       // sessionId -> Map(id -> message)
+    const pending = new Map();         // sessionId -> Map(clientMsgId -> {text})
+    const latency = new Map();
+    const customerTyping = new Set();  // sessionId co khach dang go
+    const readUpTo = new Map();        // sessionId -> { customer, agent }
+
+    const tl = (sid) => timelines.get(sid) ?? timelines.set(sid, new Map()).get(sid);
+    const pd = (sid) => pending.get(sid) ?? pending.set(sid, new Map()).get(sid);
+    const lastSeq = (sid) => Math.max(0, ...[...tl(sid).values()].map((m) => m.seq));
+    const mineActive = () => sessions.filter((s) => s.status === "active" && s.agentId === agentId);
+    const unread = (sid) => [...tl(sid).values()].filter((m) => m.senderRole === "customer" && m.seq > (readUpTo.get(sid)?.agent ?? 0)).length;
+
+    function upsert(m, viaEvent) {
+      const t = tl(m.sessionId);
+      if (t.has(m.id)) return;
+      t.set(m.id, m);
+      if (m.clientMsgId && pd(m.sessionId).delete(m.clientMsgId)) return;
+      if (viaEvent) latency.set(m.id, Date.now() - (m.clientSentAt ?? m.createdAt));
+    }
+
+    function markReadIfViewing() {
+      if (!selected || document.visibilityState !== "visible") return;
+      const seq = lastSeq(selected);
+      if (seq > (readUpTo.get(selected)?.agent ?? 0)) socket.emit("message:read", { sessionId: selected, upToSeq: seq });
+    }
+
+    function drawLists() {
+      const item = (s, isMine) => {
+        const n = isMine ? unread(s.id) : 0;
+        const last = s.lastMessage ? s.lastMessage.text : "";
+        return `<div class="item ${s.id === selected ? "selected" : ""}" data-id="${s.id}" data-mine="${isMine}">
+          <div class="top"><b>${s.id} · ${s.customerId}</b>${n ? `<span class="badge">${n}</span>` : ""}
+          ${isMine ? "" : `<button class="primary" data-join="${s.id}" style="padding:4px 10px">Nhận</button>`}</div>
+          <div class="preview">${customerTyping.has(s.id) ? '<span class="typing-dot">đang soạn tin…</span>' : escapeHtml(last)}</div></div>`;
+      };
+      const waiting = sessions.filter((s) => s.status === "waiting");
+      $("queue").innerHTML = waiting.map((s) => item(s, false)).join("") || '<div class="empty">Không có khách đang chờ</div>';
+      $("mine").innerHTML = mineActive().map((s) => item(s, true)).join("") || '<div class="empty">Chưa phụ trách phiên nào</div>';
+    }
+
+    function drawChat() {
+      const s = sessions.find((x) => x.id === selected);
+      $("placeholder").style.display = s ? "none" : "";
+      $("chat").style.display = s ? "flex" : "none";
+      if (!s) return;
+      $("chatTitle").textContent = `${s.id} · khách ${s.customerId}`;
+      $("chatSub").textContent = `Mở từ ${new Date(s.createdAt).toLocaleTimeString("vi-VN")}`;
+      C.render($("messages"), { messages: tl(s.id), pending: pd(s.id), myRole: "agent", otherReadUpTo: readUpTo.get(s.id)?.customer ?? 0, latency, otherLabel: "Khách" });
+      $("typing").textContent = customerTyping.has(s.id) ? "Khách đang soạn tin…" : "";
+    }
+    const draw = () => { drawLists(); drawChat(); };
+
+    async function join(sid) {
+      const r = await socket.timeout(5000).emitWithAck("agent:join", { sessionId: sid });
+      if (!r.ok) return alert(r.error);
+      readUpTo.set(sid, { ...r.session.readUpTo });
+      r.messages.forEach((m) => upsert(m, false));
+      select(sid);
+    }
+    function select(sid) {
+      typing.stop();
+      selected = sid;
+      $("error").textContent = "";
+      draw();
+      markReadIfViewing(); // bam vao phien = thuc su mo khung chat
+    }
+
+    // ---------------------------------------------------------------- su kien tu server
+    socket.on("connect", () => { $("conn").className = "dot on"; });
+    socket.on("disconnect", () => { $("conn").className = "dot off"; customerTyping.clear(); draw(); });
+    socket.on("queue:updated", async ({ sessions: list }) => {
+      sessions = list;
+      // Tai lich su cho phien minh phu trach nhung chua co (vd vua F5 / mo them thiet bi)
+      for (const s of mineActive()) {
+        if (!readUpTo.has(s.id)) {
+          const r = await socket.emitWithAck("agent:join", { sessionId: s.id });
+          if (r.ok) { readUpTo.set(s.id, { ...r.session.readUpTo }); r.messages.forEach((m) => upsert(m, false)); }
+        }
+      }
+      if (selected && !mineActive().some((s) => s.id === selected)) selected = null;
+      draw();
+    });
+    socket.on("message:new", (m) => { upsert(m, true); draw(); if (m.sessionId === selected) markReadIfViewing(); });
+    socket.on("typing:updated", (p) => { if (p.role !== "customer") return; p.isTyping ? customerTyping.add(p.sessionId) : customerTyping.delete(p.sessionId); draw(); });
+    socket.on("read:updated", (p) => { const r = readUpTo.get(p.sessionId) ?? { customer: 0, agent: 0 }; r[p.readerRole] = p.upToSeq; readUpTo.set(p.sessionId, r); draw(); });
+    socket.on("session:updated", ({ session }) => { sessions = sessions.map((s) => (s.id === session.id ? session : s)); draw(); });
+
+    // ---------------------------------------------------------------- thao tac
+    $("queue").addEventListener("click", (e) => { const id = e.target.dataset?.join; if (id) join(id); });
+    $("mine").addEventListener("click", (e) => { const el = e.target.closest(".item"); if (el) select(el.dataset.id); });
+
+    async function send() {
+      const raw = $("input").value;
+      const check = C.checkText(raw);
+      if (!check.ok) return ($("error").textContent = check.error);
+      const sid = selected, clientMsgId = C.uuid();
+      pd(sid).set(clientMsgId, { text: check.text });
+      $("input").value = ""; updateCounter(); typing.reset(); draw();
+      const r = await C.sendWithRetry(socket, { sessionId: sid, clientMsgId, text: raw, sentAt: Date.now() });
+      if (!r.ok) { pd(sid).delete(clientMsgId); $("input").value = raw; updateCounter(); $("error").textContent = r.error; }
+      else upsert(r.message, false);
+      draw();
+    }
+    function updateCounter() {
+      const n = C.visibleLength($("input").value), max = C.cfg.messageMaxLength;
+      $("counter").textContent = `${C.count(n)}/${C.count(max)}`;
+      $("counter").classList.toggle("over", n > max);
+    }
+    $("input").addEventListener("input", () => { $("error").textContent = ""; updateCounter(); if (selected && $("input").value.length) typing.keystroke(selected); });
+    $("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+    $("send").onclick = send;
+    $("leave").onclick = async () => { typing.stop(); const r = await socket.emitWithAck("agent:leave", { sessionId: selected }); if (r.ok) { selected = null; draw(); } };
+    $("closeChat").onclick = async () => { if (confirm("Kết thúc phiên này?")) { await socket.emitWithAck("chat:close", { sessionId: selected }); selected = null; draw(); } };
+    document.addEventListener("visibilitychange", markReadIfViewing);
+
+    function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
+    C.loadConfig().then(updateCounter);
+  </script>
+</body>
+</html>

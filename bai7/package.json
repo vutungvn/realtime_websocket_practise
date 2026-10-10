@@ -1,0 +1,43 @@
+{
+  "name": "bai7-support-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bai tap 7 - Chat ho tro khach hang thoi gian thuc (NestJS + Socket.IO)",
+  "scripts": {
+    "server": "ts-node src/server/main.ts",
+    "demo": "ts-node src/demo/chat-demo.ts",
+    "test": "jest --runInBand --verbose",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "@nestjs/platform-socket.io": "^11.1.0",
+    "@nestjs/websockets": "^11.1.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.20.5",
+    "cross-env": "^10.1.0",
+    "jest": "^29.7.0",
+    "socket.io-client": "^4.8.4",
+    "ts-jest": "^29.4.14",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.8"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "rootDir": ".",
+    "testMatch": [
+      "<rootDir>/test/**/*.spec.ts"
+    ],
+    "testTimeout": 30000,
+    "setupFiles": [
+      "<rootDir>/test/env.ts"
+    ]
+  }
+}

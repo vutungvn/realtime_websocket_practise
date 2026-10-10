@@ -1,0 +1,41 @@
+:root {
+  --brand: #ee4d2d;
+  --mine: #ee4d2d;
+  --theirs: #f1f1f1;
+  --muted: #777;
+  --ok: #137333;
+  --warn: #b06000;
+  --bad: #c5221f;
+  --line: #e5e5e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #222; background: #fafafa; }
+button { cursor: pointer; border: 0; border-radius: 6px; padding: 8px 12px; font: inherit; }
+button.primary { background: var(--brand); color: #fff; }
+button.ghost { background: transparent; color: inherit; }
+button.light { background: #eee; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+.messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+.msg { display: flex; flex-direction: column; max-width: 80%; }
+.msg.mine { align-self: flex-end; align-items: flex-end; }
+.msg.theirs { align-self: flex-start; }
+.msg.system { align-self: center; max-width: 90%; }
+.msg .bubble { padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.35; }
+.msg.mine .bubble { background: var(--mine); color: #fff; border-bottom-right-radius: 4px; }
+.msg.theirs .bubble { background: var(--theirs); border-bottom-left-radius: 4px; }
+.msg.system .bubble { background: transparent; color: var(--muted); font-size: 12px; text-align: center; padding: 2px 8px; }
+.msg.pending { opacity: .55; }
+.msg .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.typing { height: 20px; padding: 0 12px; font-size: 12px; color: var(--muted); font-style: italic; background: #fff; }
+.composer { border-top: 1px solid var(--line); padding: 8px; background: #fff; }
+.composer textarea { width: 100%; resize: none; border: 1px solid #ddd; border-radius: 8px; padding: 8px; font: inherit; height: 64px; }
+.composer .row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.composer .counter { font-size: 12px; color: var(--muted); margin-right: auto; }
+.composer .counter.over { color: var(--bad); font-weight: 600; }
+.error { color: var(--bad); font-size: 13px; min-height: 18px; padding: 2px 2px 0; }
+
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #aaa; margin-right: 6px; }
+.dot.on { background: var(--ok); } .dot.off { background: var(--bad); }
+.badge { background: var(--bad); color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 6px; }

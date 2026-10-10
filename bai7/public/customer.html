@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Khách hàng</title>
+  <link rel="stylesheet" href="/chat.css" />
+  <style>
+    .shop { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+    .shop h1 { color: var(--brand); margin: 0 0 4px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 16px; }
+    #fab { position: fixed; right: 20px; bottom: 20px; background: var(--brand); color: #fff; border-radius: 28px; padding: 14px 20px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    #fab .badge { margin-left: 6px; background: #fff; color: var(--brand); }
+    #panel { position: fixed; right: 20px; bottom: 20px; width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 40px)); display: none; flex-direction: column; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.25); background: #fff; }
+    #panel.open { display: flex; }
+    .head { background: var(--brand); color: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+    .head .title { flex: 1; } .head small { display: block; opacity: .9; font-size: 12px; }
+    .head button { color: #fff; padding: 4px 8px; }
+    #closedBar { display: none; padding: 10px; text-align: center; background: #fff; border-top: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <div class="shop">
+    <h1>ShopFast</h1>
+    <div class="muted" id="who"></div>
+    <div class="card">
+      <b>Đơn hàng ORD-1024</b> · Tai nghe Bluetooth · Đang giao
+      <p style="color:#777;margin:6px 0 0">Mở thêm 1 tab cùng địa chỉ này để giả lập điện thoại + laptop.</p>
+    </div>
+  </div>
+
+  <button id="fab">💬 Chat với ShopFast <span class="badge" id="unread" hidden>0</span></button>
+
+  <div id="panel">
+    <div class="head">
+      <span class="dot" id="conn"></span>
+      <div class="title"><b>Hỗ trợ ShopFast</b><small id="status">Đang kết nối…</small></div>
+      <button class="ghost" id="minimize" title="Thu nhỏ">▁</button>
+      <button class="ghost" id="end" title="Kết thúc">✕</button>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="typing" id="typing"></div>
+    <div class="composer" id="composer">
+      <textarea id="input" placeholder="Nhập tin nhắn… (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
+      <div class="error" id="error"></div>
+      <div class="row"><span class="counter" id="counter">0/2.000</span><button class="primary" id="send">Gửi</button></div>
+    </div>
+    <div id="closedBar">Cuộc trò chuyện đã kết thúc. <button class="primary" id="restart">Bắt đầu cuộc trò chuyện mới</button></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/chat-common.js"></script>
+  <script>
+    const C = window.ChatCommon;
+    const $ = (id) => document.getElementById(id);
+    const userId = new URLSearchParams(location.search).get("user") || "khach-01";
+    $("who").textContent = `Đăng nhập: ${userId}`;
+
+    const socket = io({ auth: { token: `customer:${userId}` }, transports: ["websocket"] });
+    const typing = C.typingController(socket);
+
+    let session = null;              // SessionView hien tai
+    let wantOpen = false;            // nguoi dung da bam mo chat (de mo lai khi noi lai)
+    const messages = new Map();      // id -> message
+    const pending = new Map();       // clientMsgId -> { text }
+    const latency = new Map();       // id -> ms (tin nhan duoc qua su kien)
+    let agentTyping = false;
+
+    const panelOpen = () => $("panel").classList.contains("open");
+    /** "Thuc su mo khung chat": khung dang mo + tab dang hien tren man hinh. */
+    const isViewing = () => panelOpen() && document.visibilityState === "visible";
+    const lastSeq = () => Math.max(0, ...[...messages.values()].map((m) => m.seq));
+
+    function draw() {
+      C.render($("messages"), { messages, pending, myRole: "customer", otherReadUpTo: session?.readUpTo.agent ?? 0, latency, otherLabel: "Nhân viên" });
+      const statusText = !session ? "Đang kết nối…"
+        : session.status === "waiting" ? "Đang chờ nhân viên hỗ trợ…"
+        : session.status === "active" ? `Nhân viên ${session.agentId} đang hỗ trợ bạn`
+        : "Đã kết thúc";
+      $("status").textContent = statusText;
+      $("typing").textContent = agentTyping ? `Nhân viên ${session?.agentId ?? ""} đang soạn tin…` : "";
+      const closed = session?.status === "closed";
+      $("composer").style.display = closed ? "none" : "";
+      $("closedBar").style.display = closed ? "block" : "none";
+      const unread = [...messages.values()].filter((m) => m.senderRole !== "customer" && m.seq > (session?.readUpTo.customer ?? 0)).length;
+      $("unread").hidden = unread === 0 || panelOpen();
+      $("unread").textContent = unread;
+    }
+
+    function upsert(m, viaEvent) {
+      if (messages.has(m.id)) return;          // da co -> khong nhan doi
+      messages.set(m.id, m);
+      if (m.clientMsgId && pending.delete(m.clientMsgId)) return; // tin cua chinh tab nay
+      if (viaEvent) latency.set(m.id, Date.now() - (m.clientSentAt ?? m.createdAt));
+    }
+
+    function markReadIfViewing() {
+      if (!session || !isViewing()) return;
+      const seq = lastSeq();
+      if (seq > session.readUpTo.customer) socket.emit("message:read", { sessionId: session.id, upToSeq: seq });
+    }
+
+    async function openChat() {
+      wantOpen = true;
+      const r = await socket.timeout(5000).emitWithAck("chat:open", { sinceSeq: session && session.status !== "closed" ? lastSeq() : 0 });
+      if (!r.ok) return showError(r.error);
+      if (session && session.id !== r.session.id) { messages.clear(); latency.clear(); }
+      session = r.session;
+      r.messages.forEach((m) => upsert(m, false));
+      draw();
+      markReadIfViewing();
+    }
+
+    // ---------------------------------------------------------------- su kien tu server
+    socket.on("connect", () => { $("conn").className = "dot on"; if (wantOpen) openChat(); });
+    socket.on("disconnect", () => { $("conn").className = "dot off"; agentTyping = false; $("status").textContent = "Mất kết nối, đang thử lại…"; });
+    socket.on("message:new", (m) => { if (m.sessionId !== session?.id) return; upsert(m, true); draw(); markReadIfViewing(); });
+    socket.on("typing:updated", (p) => { if (p.sessionId === session?.id && p.role === "agent") { agentTyping = p.isTyping; draw(); } });
+    socket.on("read:updated", (p) => { if (p.sessionId === session?.id) { session.readUpTo[p.readerRole] = p.upToSeq; draw(); } });
+    socket.on("session:updated", ({ session: s }) => { if (s.id === session?.id) { session = s; if (s.status !== "active") agentTyping = false; draw(); } });
+
+    // ---------------------------------------------------------------- nguoi dung thao tac
+    async function send() {
+      const raw = $("input").value;
+      const check = C.checkText(raw);
+      if (!check.ok) return showError(check.error);   // BAY: rong / qua dai -> bao ngay, giu nguyen noi dung da go
+      if (!session) return;
+      const clientMsgId = C.uuid();
+      pending.set(clientMsgId, { text: check.text });
+      $("input").value = "";
+      updateCounter();
+      typing.reset();
+      draw();
+      const r = await C.sendWithRetry(socket, { sessionId: session.id, clientMsgId, text: raw, sentAt: Date.now() });
+      if (!r.ok) {
+        pending.delete(clientMsgId);
+        $("input").value = raw; // tra lai noi dung de khach sua
+        updateCounter();
+        showError(r.error);
+      } else upsert(r.message, false);
+      draw();
+    }
+
+    function showError(msg) { $("error").textContent = msg; }
+    function updateCounter() {
+      const n = C.visibleLength($("input").value), max = C.cfg.messageMaxLength;
+      $("counter").textContent = `${C.count(n)}/${C.count(max)}`;
+      $("counter").classList.toggle("over", n > max);
+    }
+
+    $("input").addEventListener("input", () => {
+      showError("");
+      updateCounter();
+      if (session && session.status !== "closed" && $("input").value.length) typing.keystroke(session.id);
+    });
+    $("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+    $("send").onclick = send;
+    $("fab").onclick = () => { $("panel").classList.add("open"); $("fab").style.display = "none"; openChat(); };
+    $("minimize").onclick = () => { $("panel").classList.remove("open"); $("fab").style.display = ""; draw(); };
+    $("end").onclick = async () => { if (session && session.status !== "closed" && confirm("Kết thúc cuộc trò chuyện?")) await socket.emitWithAck("chat:close", { sessionId: session.id }); };
+    $("restart").onclick = () => { session = null; messages.clear(); latency.clear(); openChat(); };
+    document.addEventListener("visibilitychange", markReadIfViewing);
+
+    C.loadConfig().then(updateCounter);
+  </script>
+</body>
+</html>

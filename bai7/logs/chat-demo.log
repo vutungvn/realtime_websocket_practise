@@ -1,0 +1,111 @@
+10:03:50.049 [DEMO      ] ========== 1. Nhan vien An online; khach mo khung chat tren LAPTOP ==========
+10:03:50.070 [SERVER    ] + agent:an ket noi (socket tGjMVRuXPtCAphIEAAAA)
+10:03:50.072 [NV-AN     ] ket noi (socket tGjMVRuXPtCAphIEAAAA)
+10:03:50.075 [SERVER    ] + customer:khach-01 ket noi (socket yrgrCUgelfQLuevpAAAB)
+10:03:50.075 [KHACH-LAPTOP] ket noi (socket yrgrCUgelfQLuevpAAAB)
+10:03:50.077 [SERVER    ] customer:khach-01 TAO MOI phien S-0001 (socket yrgrCUgelfQLuevpAAAB, trang thai waiting)
+10:03:50.079 [KHACH-LAPTOP] TAO MOI phien S-0001 (waiting), 1 tin trong lich su
+10:03:50.079 [DEMO      ] hang cho cua nhan vien: S-0001(waiting)
+10:03:50.080 [DEMO      ] ========== 2. Nhan vien An nhan phien ==========
+10:03:50.081 [SERVER    ] agent:an NHAN phien S-0001
+10:03:50.082 [KHACH-LAPTOP] <- nhan S-0001#2 tu he thong: "Nhân viên an đã tham gia cuộc trò chuyện...(58 ky tu)" | tre 1ms
+10:03:50.082 [KHACH-LAPTOP] phien S-0001: ACTIVE (agent_joined)
+10:03:50.082 [NV-AN     ] <- nhan S-0001#2 tu he thong: "Nhân viên an đã tham gia cuộc trò chuyện...(58 ky tu)" | tre 1ms
+10:03:50.083 [NV-AN     ] phien S-0001: ACTIVE (agent_joined)
+10:03:50.083 [NV-AN     ] nhan phien S-0001 (2 tin lich su)
+10:03:50.084 [DEMO      ] ========== 3. Khach go phim ~1.5 giay roi dung -> 'dang soan tin' phai tu tat sau 3 giay ==========
+10:03:50.085 [SERVER    ] typing S-0001 customer: BAT
+10:03:50.085 [NV-AN     ] ... customer dang soan tin (S-0001)
+10:03:51.652 [DEMO      ] khach ngung go phim
+10:03:54.406 [SERVER    ] typing S-0001 customer: TAT
+10:03:54.407 [NV-AN     ]     customer ngung soan tin (S-0001)
+10:03:54.421 [DEMO      ] nhan vien thay 'dang soan' sau 1ms ke tu phim dau; tu tat sau 3017ms ke tu phim cuoi
+10:03:54.422 [DEMO      ] ========== 4. Hoi dap hai chieu (do tre ghi o moi dong '<- nhan') ==========
+10:03:54.423 [KHACH-LAPTOP] -> gui: "Chao shop, don ORD-1024 cua minh bao gio...(50 ky tu)"
+10:03:54.426 [SERVER    ] tin S-0001#3 tu customer:khach-01: "Chao shop, don ORD-1024 cua minh bao gio..." -> 2 socket | client->server 3ms
+10:03:54.428 [NV-AN     ] <- nhan S-0001#3 tu customer:khach-01: "Chao shop, don ORD-1024 cua minh bao gio...(50 ky tu)" | tre 5ms
+10:03:54.430 [SERVER    ] agent:an da xem S-0001 den tin #2
+10:03:54.431 [SERVER    ] typing S-0001 agent: BAT
+10:03:54.432 [KHACH-LAPTOP] ✓✓ agent da xem den tin #2 (S-0001)
+10:03:54.433 [KHACH-LAPTOP] ... agent dang soan tin (S-0001)
+10:03:55.247 [NV-AN     ] -> gui: "Chao chi, don ORD-1024 dang tren duong g...(69 ky tu)"
+10:03:55.250 [SERVER    ] typing S-0001 agent: TAT
+10:03:55.251 [SERVER    ] tin S-0001#4 tu agent:an: "Chao chi, don ORD-1024 dang tren duong g..." -> 2 socket | client->server 2ms
+10:03:55.252 [KHACH-LAPTOP]     agent ngung soan tin (S-0001)
+10:03:55.253 [KHACH-LAPTOP] <- nhan S-0001#4 tu agent:an: "Chao chi, don ORD-1024 dang tren duong g...(69 ky tu)" | tre 6ms
+10:03:55.256 [KHACH-LAPTOP] -> gui: "Ok cam on ban nhe"
+10:03:55.258 [SERVER    ] customer:khach-01 da xem S-0001 den tin #4
+10:03:55.259 [SERVER    ] tin S-0001#5 tu customer:khach-01: "Ok cam on ban nhe" -> 2 socket | client->server 3ms
+10:03:55.260 [DEMO      ] ========== 5. Khach mo them khung chat tren DIEN THOAI (cung tai khoan) ==========
+10:03:55.264 [NV-AN     ] ✓✓ customer da xem den tin #4 (S-0001)
+10:03:55.265 [NV-AN     ] <- nhan S-0001#5 tu customer:khach-01: "Ok cam on ban nhe" | tre 9ms
+10:03:55.268 [SERVER    ] + customer:khach-01 ket noi (socket g4KOMDgJadVOSgvQAAAC)
+10:03:55.270 [KHACH-PHONE] ket noi (socket g4KOMDgJadVOSgvQAAAC)
+10:03:55.272 [SERVER    ] customer:khach-01 NOI LAI phien S-0001 (socket g4KOMDgJadVOSgvQAAAC, trang thai active)
+10:03:55.274 [KHACH-PHONE] NOI LAI phien S-0001 (active), 5 tin trong lich su
+10:03:55.275 [DEMO      ] dien thoai: NOI LAI phien S-0001, nhan 5 tin lich su
+10:03:55.276 [KHACH-PHONE] -> gui: "Minh nhan tin tu dien thoai nhe"
+10:03:55.278 [SERVER    ] tin S-0001#6 tu customer:khach-01: "Minh nhan tin tu dien thoai nhe" -> 3 socket | client->server 1ms
+10:03:55.279 [KHACH-LAPTOP] <- nhan S-0001#6 tu customer:khach-01: "Minh nhan tin tu dien thoai nhe" | tre 3ms (dong bo tu thiet bi khac cua minh)
+10:03:55.280 [NV-AN     ] <- nhan S-0001#6 tu customer:khach-01: "Minh nhan tin tu dien thoai nhe" | tre 4ms
+10:03:55.281 [NV-AN     ] -> gui: "Da em nhan duoc a"
+10:03:55.282 [SERVER    ] tin S-0001#7 tu agent:an: "Da em nhan duoc a" -> 3 socket | client->server 1ms
+10:03:55.283 [KHACH-LAPTOP] <- nhan S-0001#7 tu agent:an: "Da em nhan duoc a" | tre 2ms
+10:03:55.284 [KHACH-PHONE] <- nhan S-0001#7 tu agent:an: "Da em nhan duoc a" | tre 3ms
+10:03:55.294 [DEMO      ] ========== 6. 'Da xem': nhan vien NHAN tin nhung chua mo khung chat -> chua bao da xem ==========
+10:03:55.295 [KHACH-PHONE] -> gui: "Shop co the giao truoc 14h duoc khong?"
+10:03:55.298 [SERVER    ] tin S-0001#8 tu customer:khach-01: "Shop co the giao truoc 14h duoc khong?" -> 3 socket | client->server 2ms
+10:03:55.299 [KHACH-LAPTOP] <- nhan S-0001#8 tu customer:khach-01: "Shop co the giao truoc 14h duoc khong?" | tre 4ms (dong bo tu thiet bi khac cua minh)
+10:03:55.300 [NV-AN     ] <- nhan S-0001#8 tu customer:khach-01: "Shop co the giao truoc 14h duoc khong?" | tre 5ms
+10:03:56.305 [DEMO      ] sau 1 giay ma nhan vien chua mo khung chat: CHUA XEM (dung)
+10:03:56.306 [DEMO      ] nhan vien bam vao phien de doc
+10:03:56.307 [SERVER    ] agent:an da xem S-0001 den tin #8
+10:03:56.308 [KHACH-LAPTOP] ✓✓ agent da xem den tin #8 (S-0001)
+10:03:56.309 [KHACH-PHONE] ✓✓ agent da xem den tin #8 (S-0001)
+10:03:56.321 [DEMO      ] ========== 7. Bay du lieu: tin rong, chi khoang trang, 20.000 ky tu ==========
+10:03:56.322 [KHACH-LAPTOP] (chan o client) Bạn chưa nhập nội dung. Hãy gõ vài chữ trước khi gửi nhé!
+10:03:56.322 [KHACH-LAPTOP] (chan o client) Bạn chưa nhập nội dung. Hãy gõ vài chữ trước khi gửi nhé!
+10:03:56.343 [KHACH-LAPTOP] (chan o client) Tin nhắn dài 20.000 ký tự, vượt giới hạn 2.000 ký tự. Bạn vui lòng rút gọn hoặc chia thành nhiều tin nhỏ hơn nhé.
+10:03:56.344 [DEMO      ] gia lap client bi sua (bo qua kiem tra o trinh duyet), gui thang len server:
+10:03:56.346 [SERVER    ] CHAN tin tu customer:khach-01: TOO_LONG (do dai goc 20000)
+10:03:56.347 [DEMO      ] server tra loi: {"ok":false,"code":"TOO_LONG","error":"Tin nhắn dài 20.000 ký tự, vượt giới hạn 2.000 ký tự. Bạn vui lòng rút gọn hoặc chia thành nhiều tin nhỏ hơn nhé."}
+10:03:56.347 [DEMO      ] ket noi cua khach van song: true
+10:03:56.348 [DEMO      ] ========== 8. Nhan vien An roi phien -> khach duoc bao, phien ve hang cho; nhan vien Binh nhan tiep ==========
+10:03:56.354 [SERVER    ] + agent:binh ket noi (socket HU-8yrTJN5MY-lM_AAAD)
+10:03:56.356 [NV-BINH   ] ket noi (socket HU-8yrTJN5MY-lM_AAAD)
+10:03:56.360 [SERVER    ] phien S-0001 VE HANG CHO (agent_left, nhan vien cu an)
+10:03:56.361 [KHACH-LAPTOP] <- nhan S-0001#9 tu he thong: "Nhân viên an đã rời cuộc trò chuyện. Bạn...(114 ky tu)" | tre 2ms
+10:03:56.362 [KHACH-LAPTOP] phien S-0001: WAITING (agent_left)
+10:03:56.363 [KHACH-PHONE] <- nhan S-0001#9 tu he thong: "Nhân viên an đã rời cuộc trò chuyện. Bạn...(114 ky tu)" | tre 4ms
+10:03:56.364 [KHACH-PHONE] phien S-0001: WAITING (agent_left)
+10:03:56.365 [NV-AN     ] roi phien S-0001
+10:03:56.383 [DEMO      ] hang cho cua Binh: S-0001(waiting)
+10:03:56.385 [SERVER    ] agent:binh NHAN phien S-0001
+10:03:56.387 [KHACH-LAPTOP] <- nhan S-0001#10 tu he thong: "Nhân viên binh đã tham gia cuộc trò chuy...(60 ky tu)" | tre 2ms
+10:03:56.388 [KHACH-LAPTOP] phien S-0001: ACTIVE (agent_joined)
+10:03:56.389 [KHACH-PHONE] <- nhan S-0001#10 tu he thong: "Nhân viên binh đã tham gia cuộc trò chuy...(60 ky tu)" | tre 4ms
+10:03:56.390 [KHACH-PHONE] phien S-0001: ACTIVE (agent_joined)
+10:03:56.391 [NV-BINH   ] <- nhan S-0001#10 tu he thong: "Nhân viên binh đã tham gia cuộc trò chuy...(60 ky tu)" | tre 6ms
+10:03:56.392 [NV-BINH   ] phien S-0001: ACTIVE (agent_joined)
+10:03:56.393 [NV-BINH   ] nhan phien S-0001 (10 tin lich su)
+10:03:56.395 [NV-BINH   ] -> gui: "Chao chi, em la Binh, em ho tro tiep a."
+10:03:56.397 [SERVER    ] tin S-0001#11 tu agent:binh: "Chao chi, em la Binh, em ho tro tiep a." -> 3 socket | client->server 2ms
+10:03:56.399 [KHACH-LAPTOP] <- nhan S-0001#11 tu agent:binh: "Chao chi, em la Binh, em ho tro tiep a." | tre 4ms
+10:03:56.400 [KHACH-PHONE] <- nhan S-0001#11 tu agent:binh: "Chao chi, em la Binh, em ho tro tiep a." | tre 5ms
+10:03:56.401 [DEMO      ] ========== 9. Khach dong phien ==========
+10:03:56.402 [SERVER    ] customer:khach-01 DONG phien S-0001
+10:03:56.403 [KHACH-LAPTOP] <- nhan S-0001#12 tu he thong: "Cuộc trò chuyện đã được khách hàng kết t...(76 ky tu)" | tre 1ms
+10:03:56.404 [KHACH-LAPTOP] phien S-0001: CLOSED (closed)
+10:03:56.405 [KHACH-PHONE] <- nhan S-0001#12 tu he thong: "Cuộc trò chuyện đã được khách hàng kết t...(76 ky tu)" | tre 3ms
+10:03:56.406 [KHACH-PHONE] phien S-0001: CLOSED (closed)
+10:03:56.407 [NV-BINH   ] <- nhan S-0001#12 tu he thong: "Cuộc trò chuyện đã được khách hàng kết t...(76 ky tu)" | tre 5ms
+10:03:56.408 [NV-BINH   ] phien S-0001: CLOSED (closed)
+10:03:56.415 [DEMO      ] ========== KET QUA ==========
+10:03:56.415 [DEMO      ] do tre 21 lan nhan tin: min 1ms, trung binh 4ms, max 9ms -> DAT (< 1 giay)
+10:03:56.416 [DEMO      ] laptop: 12 tin, trung lap 0
+10:03:56.417 [DEMO      ] dien thoai: 12 tin, trung lap 0
+10:03:56.418 [DEMO      ] laptop va dien thoai hien GIONG HET nhau (cung id, cung thu tu): DUNG
+10:03:56.422 [SERVER    ] - agent:an ngat (socket tGjMVRuXPtCAphIEAAAA, server shutting down), con 0 thiet bi
+10:03:56.423 [SERVER    ] - customer:khach-01 ngat (socket yrgrCUgelfQLuevpAAAB, server shutting down), con 1 thiet bi
+10:03:56.424 [SERVER    ] - customer:khach-01 ngat (socket g4KOMDgJadVOSgvQAAAC, server shutting down), con 0 thiet bi
+10:03:56.425 [SERVER    ] - agent:binh ngat (socket HU-8yrTJN5MY-lM_AAAD, server shutting down), con 0 thiet bi
