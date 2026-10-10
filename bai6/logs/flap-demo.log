@@ -1,0 +1,38 @@
+09:06:27.183 [DEMO      ] 50 tai xe, mang chap chon 10 lan / 30s (moi lan: cat ngang + mat song 1500ms + co song 1500ms)
+09:06:27.184 [DEMO      ] cau hinh dung: {"reconnection":true,"reconnectionAttempts":15,"reconnectionDelay":1000,"reconnectionDelayMax":30000,"randomizationFactor":0.5,"timeout":5000}
+09:06:27.185 [DEMO      ] ========== DUNG (backoff 1s->30s, jitter 50%, toi da 15 lan) ==========
+09:06:30.454 [DEMO      ] chap chon 1/10: so lan thu ket noi tich luy 78, dang online 31/50
+09:06:33.471 [DEMO      ] chap chon 2/10: so lan thu ket noi tich luy 145, dang online 19/50
+09:06:36.479 [DEMO      ] chap chon 3/10: so lan thu ket noi tich luy 203, dang online 19/50
+09:06:39.482 [DEMO      ] chap chon 4/10: so lan thu ket noi tich luy 253, dang online 10/50
+09:06:42.497 [DEMO      ] chap chon 5/10: so lan thu ket noi tich luy 294, dang online 8/50
+09:06:45.518 [DEMO      ] chap chon 6/10: so lan thu ket noi tich luy 334, dang online 14/50
+09:06:48.535 [DEMO      ] chap chon 7/10: so lan thu ket noi tich luy 378, dang online 18/50
+09:06:51.548 [DEMO      ] chap chon 8/10: so lan thu ket noi tich luy 423, dang online 19/50
+09:06:54.568 [DEMO      ] chap chon 9/10: so lan thu ket noi tich luy 474, dang online 18/50
+09:06:57.586 [DEMO      ] chap chon 10/10: so lan thu ket noi tich luy 515, dang online 16/50
+09:07:16.068 [DEMO      ] ========== SAI  (co dinh 100ms, khong jitter, vo han) ==========
+09:07:19.211 [DEMO      ] chap chon 1/10: so lan thu ket noi tich luy 652, dang online 50/50
+09:07:22.221 [DEMO      ] chap chon 2/10: so lan thu ket noi tich luy 1334, dang online 50/50
+09:07:25.235 [DEMO      ] chap chon 3/10: so lan thu ket noi tich luy 2034, dang online 50/50
+09:07:28.244 [DEMO      ] chap chon 4/10: so lan thu ket noi tich luy 2681, dang online 50/50
+09:07:31.264 [DEMO      ] chap chon 5/10: so lan thu ket noi tich luy 3369, dang online 50/50
+09:07:34.286 [DEMO      ] chap chon 6/10: so lan thu ket noi tich luy 4019, dang online 50/50
+09:07:37.309 [DEMO      ] chap chon 7/10: so lan thu ket noi tich luy 4670, dang online 50/50
+09:07:40.322 [DEMO      ] chap chon 8/10: so lan thu ket noi tich luy 5370, dang online 50/50
+09:07:43.344 [DEMO      ] chap chon 9/10: so lan thu ket noi tich luy 6020, dang online 50/50
+09:07:46.350 [DEMO      ] chap chon 10/10: so lan thu ket noi tich luy 6670, dang online 50/50
+09:07:47.412 [DEMO      ] ================ KET QUA ================
+09:07:47.412 [DEMO      ] DUNG (backoff 1s->30s, jitter 50%, toi da 15 lan)
+09:07:47.413 [DEMO      ]   tong so lan thu ket noi tu 50 dien thoai : 549  (~11.0 lan/tai xe)
+09:07:47.413 [DEMO      ]   so lan bat tay toi server               : 206
+09:07:47.414 [DEMO      ]   dinh trong 1 giay / trong 100ms          : 50 / 8
+09:07:47.414 [DEMO      ]   tat ca online lai sau bao                : CO (17.4s sau lan chap chon cuoi)
+09:07:47.414 [DEMO      ]   moi tai xe nhan don moi dung 1 lan       : DUNG
+09:07:47.415 [DEMO      ] SAI  (co dinh 100ms, khong jitter, vo han)
+09:07:47.415 [DEMO      ]   tong so lan thu ket noi tu 50 dien thoai : 6670  (~133.4 lan/tai xe)
+09:07:47.416 [DEMO      ]   so lan bat tay toi server               : 500
+09:07:47.416 [DEMO      ]   dinh trong 1 giay / trong 100ms          : 494 / 50
+09:07:47.416 [DEMO      ]   tat ca online lai sau bao                : CO (1ms sau lan chap chon cuoi)
+09:07:47.417 [DEMO      ]   moi tai xe nhan don moi dung 1 lan       : DUNG
+09:07:47.417 [DEMO      ] => cau hinh sai tao ra gap 12.1 lan so request, dinh 100ms gap 6.3 lan

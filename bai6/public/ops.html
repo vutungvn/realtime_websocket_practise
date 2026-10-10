@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast Ops</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 24px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+    .pill { padding: 2px 8px; border-radius: 10px; color: #fff; font-size: 12px; font-weight: 600; }
+    .online { background: #137333; } .reconnecting { background: #b06000; } .offline { background: #777; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input, select, button { padding: 6px 10px; } code { font-size: 12px; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Van hanh ShopFast (truy cap thang server, khong qua mang gia lap)</h1>
+
+  <h2>Tao don moi</h2>
+  <div class="row">
+    <select id="zone"><option>cau-giay</option><option>dong-da</option><option>ba-dinh</option></select>
+    <input id="address" placeholder="Dia chi" value="12 Tran Thai Tong" />
+    <button id="create">Tao don</button>
+    <span id="createRes" class="muted"></span>
+  </div>
+
+  <h2>Tai xe <span class="muted">(tu lam moi moi 1s)</span></h2>
+  <table>
+    <thead><tr><th>Tai xe</th><th>Trang thai</th><th>Tu luc</th><th>Tin hieu cuoi</th><th>Ly do ngat gan nhat</th><th>Room</th></tr></thead>
+    <tbody id="drivers"><tr><td colspan="6" class="muted">Chua co tai xe</td></tr></tbody>
+  </table>
+
+  <h2>Thong ke ket noi</h2>
+  <pre id="stats">...</pre>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const time = (iso) => new Date(iso).toLocaleTimeString("vi-VN", { hour12: false });
+    const ago = (iso) => Math.round((Date.now() - new Date(iso)) / 1000) + "s truoc";
+
+    async function refresh() {
+      const [drivers, stats] = await Promise.all([fetch("/drivers").then((r) => r.json()), fetch("/stats").then((r) => r.json())]);
+      $("drivers").innerHTML = drivers.length ? drivers.map((d) => `
+        <tr>
+          <td><b>${d.driverId}</b></td>
+          <td><span class="pill ${d.status}">${d.status.toUpperCase()}</span></td>
+          <td>${time(d.statusSince)}</td>
+          <td>${time(d.lastSeenAt)} <span class="muted">(${ago(d.lastSeenAt)})</span></td>
+          <td>${d.lastDisconnectReason ?? "-"}</td>
+          <td><code>${d.rooms.join("<br>") || "-"}</code></td>
+        </tr>`).join("") : `<tr><td colspan="6" class="muted">Chua co tai xe</td></tr>`;
+      $("stats").textContent = JSON.stringify(stats, null, 2);
+    }
+    setInterval(refresh, 1000);
+    refresh();
+
+    $("create").onclick = async () => {
+      const res = await fetch("/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zone: $("zone").value, address: $("address").value }),
+      }).then((r) => r.json());
+      $("createRes").textContent = `${res.order.orderId} -> phat toi ${res.deliveredTo} socket`;
+    };
+  </script>
+</body>
+</html>

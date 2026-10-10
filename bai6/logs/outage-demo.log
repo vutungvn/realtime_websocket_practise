@@ -1,0 +1,56 @@
+09:10:35.720 [SERVER    ] heartbeat: ping moi 10000ms, cho pong 5000ms -> phat hien mat ket noi toi da ~15000ms; an han offline 5000ms
+09:10:35.735 [DEMO      ] server :63003, mang gia lap :63004 | app tai xe -> mang gia lap -> server
+09:10:35.736 [DEMO      ] ========== 1. BINH THUONG: tai xe mo app ==========
+09:10:35.750 [SERVER    ] tai xe driver-01: OFFLINE -> ONLINE (socket xeCdI4TTAn3RPv7kAAAA)
+09:10:35.750 [SERVER    ] + driver-01 ket noi (socket xeCdI4TTAn3RPv7kAAAA, transport websocket)
+09:10:35.751 [DRIVER-APP] 🟢 da ket noi, socket xeCdI4TTAn3RPv7kAAAA
+09:10:35.754 [SERVER    ] driver-01 (socket xeCdI4TTAn3RPv7kAAAA) dang ky room: driver:driver-01, zone:cau-giay, zone:dong-da
+09:10:35.755 [DRIVER-APP] dang ky lai room: driver:driver-01, zone:cau-giay, zone:dong-da
+09:10:35.755 [DRIVER-APP] banner: "Dang truc tuyen - san sang nhan don" (2 khu vuc)
+09:10:35.868 [DISPATCH  ] tao don ORD-0001 (seq 1) zone cau-giay -> phat vao room co 1 socket
+09:10:35.874 [DEMO      ] room tren server TRUOC khi mat mang: driver:driver-01, zone:cau-giay, zone:dong-da
+09:10:35.875 [DRIVER-APP] 📦 nhan don ORD-0001 [cau-giay] 100 duong demo, cau-giay
+09:10:39.882 [DISPATCH  ] tao don ORD-0002 (seq 2) zone dong-da -> phat vao room co 1 socket
+09:10:39.884 [DRIVER-APP] 📦 nhan don ORD-0002 [dong-da] 101 duong demo, dong-da
+09:10:40.882 [DEMO      ] ========== 2. TAI XE VAO HAM: mat mang 15 giay ==========
+09:10:40.883 [NETWORK   ] 📵 MAT MANG: 1 ket noi dang mo bi treo, ket noi moi bi tu choi
+09:10:43.886 [DISPATCH  ] tao don ORD-0003 (seq 3) zone ba-dinh -> phat vao room co 0 socket
+09:10:47.901 [DISPATCH  ] tao don ORD-0004 (seq 4) zone cau-giay -> phat vao room co 1 socket
+09:10:50.754 [DRIVER-APP] 🔴 MAT KET NOI (ly do: ping timeout) -> banner "Mat ket noi - dang thu ket noi lai..."
+09:10:50.770 [SERVER    ] - driver-01 ngat (socket xeCdI4TTAn3RPv7kAAAA, ly do: ping timeout)
+09:10:50.771 [SERVER    ] tai xe driver-01: ONLINE -> DANG CHO NOI LAI (ly do: ping timeout, tin hieu cuoi luc 09:10:35.753)
+09:10:51.637 [DRIVER-APP] ↻ thu noi lai lan 1/15 (da cho 883ms)
+09:10:51.642 [DRIVER-APP]   lan thu that bai: websocket error
+09:10:51.919 [DISPATCH  ] tao don ORD-0005 (seq 5) zone dong-da -> phat vao room co 0 socket
+09:10:53.145 [DRIVER-APP] ↻ thu noi lai lan 2/15 (da cho 1.5s)
+09:10:53.148 [DRIVER-APP]   lan thu that bai: websocket error
+09:10:55.780 [SERVER    ] tai xe driver-01: RECONNECTING -> OFFLINE (khong quay lai sau 5.0s an han (mat tin hieu tu 09:10:35.753, 20.0s truoc))
+09:10:55.889 [DEMO      ] ========== 3. RA KHOI HAM: co mang lai, app tu noi lai (tai xe khong thao tac gi) ==========
+09:10:55.890 [NETWORK   ] 📶 CO MANG LAI (chuyen tiep 4 goi bi giu)
+09:10:55.920 [DRIVER-APP] ↻ thu noi lai lan 3/15 (da cho 2.8s)
+09:10:55.925 [DISPATCH  ] tao don ORD-0006 (seq 6) zone ba-dinh -> phat vao room co 0 socket
+09:10:55.927 [DRIVER-APP] ✅ noi lai thanh cong o lan thu 3
+09:10:55.928 [SERVER    ] tai xe driver-01: OFFLINE -> ONLINE (socket ZMNbpyWxa0KDc27IAAAB)
+09:10:55.929 [SERVER    ] + driver-01 ket noi (socket ZMNbpyWxa0KDc27IAAAB, transport websocket)
+09:10:55.929 [DRIVER-APP] 🟢 da ket noi, socket ZMNbpyWxa0KDc27IAAAB | gian doan 5.2s
+09:10:55.930 [SERVER    ] driver-01 (socket ZMNbpyWxa0KDc27IAAAB) dang ky room: driver:driver-01, zone:cau-giay, zone:dong-da | bu 2 don bi lo tu seq 2
+09:10:55.931 [DRIVER-APP] dang ky lai room: driver:driver-01, zone:cau-giay, zone:dong-da
+09:10:55.931 [DRIVER-APP] 📦 nhan don ORD-0004 [cau-giay] 103 duong demo, cau-giay (bu don bi lo luc mat mang)
+09:10:55.931 [DRIVER-APP] 📦 nhan don ORD-0005 [dong-da] 104 duong demo, dong-da (bu don bi lo luc mat mang)
+09:10:55.932 [DRIVER-APP] banner: "Dang truc tuyen - san sang nhan don" (2 khu vuc)
+09:10:56.002 [DEMO      ] tu noi lai: CO | socket xeCdI4TTAn3RPv7kAAAA -> ZMNbpyWxa0KDc27IAAAB | tong gian doan 15.1s
+09:10:56.002 [DEMO      ] room tren server SAU khi noi lai: driver:driver-01, zone:cau-giay, zone:dong-da
+09:10:56.002 [DEMO      ] room giong truoc khi mat mang: DUNG
+09:10:59.939 [DISPATCH  ] tao don ORD-0007 (seq 7) zone cau-giay -> phat vao room co 1 socket
+09:10:59.941 [DRIVER-APP] 📦 nhan don ORD-0007 [cau-giay] 106 duong demo, cau-giay
+09:11:00.030 [DEMO      ] nhan duoc don MOI sau khi noi lai: CO
+09:11:00.542 [DEMO      ] don thuoc khu vuc tai xe: 5, da nhan: 5, bi mat: 0
+09:11:00.543 [DEMO      ] do tre giua cac lan thu lai: #1=883ms, #2=1.5s, #3=2.8s
+09:11:00.544 [DEMO      ] ========== 4. TAT HAN APP: dien thoai het pin trong vung mat song (server khong nhan duoc tin bao dong) ==========
+09:11:00.544 [NETWORK   ] 📵 MAT MANG: 1 ket noi dang mo bi treo, ket noi moi bi tu choi
+09:11:00.545 [DEMO      ] server phai danh dau OFFLINE trong <= ping 10000 + pong 5000 + an han 5000 = 20.0s
+09:11:10.937 [SERVER    ] - driver-01 ngat (socket ZMNbpyWxa0KDc27IAAAB, ly do: ping timeout)
+09:11:10.938 [SERVER    ] tai xe driver-01: ONLINE -> DANG CHO NOI LAI (ly do: ping timeout, tin hieu cuoi luc 09:10:55.930)
+09:11:15.942 [SERVER    ] tai xe driver-01: RECONNECTING -> OFFLINE (khong quay lai sau 5.0s an han (mat tin hieu tu 09:10:55.930, 20.0s truoc))
+09:11:16.013 [DEMO      ] server danh dau OFFLINE sau 15.5s (trang thai: offline)
+09:11:16.014 [DEMO      ] ========== KET THUC ==========

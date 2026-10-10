@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast Driver</title>
+  <style>
+    :root { --ok: #137333; --warn: #b06000; --bad: #c5221f; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f5f5f5; }
+    #banner { position: sticky; top: 0; padding: 12px 16px; color: #fff; font-weight: 600; transition: background .2s; }
+    #banner.online { background: var(--ok); }
+    #banner.reconnecting, #banner.connecting { background: var(--warn); }
+    #banner.waiting-network, #banner.rejected { background: var(--bad); }
+    #banner small { display: block; font-weight: 400; opacity: .9; margin-top: 2px; }
+    main { padding: 12px 16px; max-width: 640px; margin: auto; }
+    .card { background: #fff; border-radius: 8px; padding: 10px 12px; margin: 8px 0; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .card b { font-size: 15px; } .muted { color: #666; font-size: 13px; }
+    #log { font-family: monospace; font-size: 12px; white-space: pre-wrap; background: #fff; border-radius: 8px; padding: 8px; max-height: 260px; overflow: auto; }
+    h2 { font-size: 15px; margin: 16px 0 4px; }
+  </style>
+</head>
+<body>
+  <div id="banner" class="connecting">Dang ket noi...<small></small></div>
+  <main>
+    <div class="muted" id="who"></div>
+    <h2>Don moi</h2>
+    <div id="orders"><div class="muted">Chua co don</div></div>
+    <h2>Nhat ky ket noi</h2>
+    <div id="log"></div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Ban trinh duyet cua src/client/driver-client.ts (cung cau hinh, cung 5 cho khuyet).
+    // Mo qua proxy de gia lap mat mang: http://localhost:4100/driver.html?driver=driver-01&zones=cau-giay,dong-da
+    const q = new URLSearchParams(location.search);
+    const driverId = q.get("driver") || "driver-01";
+    const zones = (q.get("zones") || "cau-giay,dong-da").split(",").filter(Boolean);
+    const MAX_ATTEMPTS = 15, SLOW_RETRY_MS = 60000;
+    document.getElementById("who").textContent = `Tai xe ${driverId} · khu vuc: ${zones.join(", ")}`;
+
+    const $banner = document.getElementById("banner");
+    const setBanner = (kind, text, sub = "") => { $banner.className = kind; $banner.innerHTML = `${text}<small>${sub}</small>`; };
+    const t = () => new Date().toLocaleTimeString("vi-VN", { hour12: false });
+    const say = (m) => { const el = document.getElementById("log"); el.textContent = `${t()} ${m}\n` + el.textContent; };
+    const fmt = (ms) => ms >= 1000 ? (ms / 1000).toFixed(1) + "s" : ms + "ms";
+
+    const socket = io({
+      auth: { token: `tok_${driverId}` },
+      transports: ["websocket"],
+      // (1) tu dong ket noi lai
+      reconnection: true,
+      // (2) gioi han so lan + backoff gian dan co jitter
+      reconnectionAttempts: MAX_ATTEMPTS,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
+      timeout: 5000,
+    });
+
+    let syncedSeq = null, lastFailAt = 0, disconnectedAt = 0, retryTimer;
+    const seen = new Set();
+
+    function receive(o, note = "") {
+      syncedSeq = Math.max(syncedSeq ?? 0, o.seq);
+      if (seen.has(o.orderId)) return;
+      seen.add(o.orderId);
+      const box = document.getElementById("orders");
+      if (seen.size === 1) box.innerHTML = "";
+      box.insertAdjacentHTML("afterbegin",
+        `<div class="card"><b>${o.orderId}</b> · ${o.zone}<div class="muted">${o.address} · ${new Date(o.createdAt).toLocaleTimeString("vi-VN")}${note}</div></div>`);
+      say(`nhan don ${o.orderId}${note}`);
+    }
+
+    // Listener nghiep vu: dang ky 1 lan duy nhat, ngoai "connect"
+    socket.on("order:new", (o) => receive(o));
+
+    socket.on("connect", async () => {
+      clearTimeout(retryTimer);
+      say(`da ket noi, socket ${socket.id}` + (disconnectedAt ? ` (gian doan ${fmt(Date.now() - disconnectedAt)})` : ""));
+      // (3) dang ky lai room sau khi noi lai
+      try {
+        const res = await socket.timeout(5000).emitWithAck("driver:subscribe", { zones, sinceSeq: syncedSeq });
+        say(`dang ky room: ${res.rooms.join(", ")}`);
+        res.missed.forEach((o) => receive(o, " · bu don luc mat mang"));
+        syncedSeq = Math.max(syncedSeq ?? 0, res.serverSeq);
+        disconnectedAt = 0;
+        setBanner("online", "Dang truc tuyen", "San sang nhan don");
+      } catch { say("dang ky room khong phan hoi"); }
+    });
+
+    // (4) bao cho tai xe biet khi mat ket noi
+    socket.on("disconnect", (reason) => {
+      disconnectedAt = lastFailAt = Date.now();
+      setBanner("reconnecting", "Mat ket noi", `Dang thu ket noi lai... (${reason})`);
+      say(`MAT KET NOI: ${reason}`);
+      if (reason === "io server disconnect") socket.connect();
+    });
+    socket.io.on("reconnect_attempt", (n) => {
+      setBanner("reconnecting", "Mat ket noi", `Dang thu lai lan ${n}/${MAX_ATTEMPTS}...`);
+      say(`thu lai lan ${n} (da cho ${fmt(Date.now() - lastFailAt)})`);
+    });
+    socket.io.on("reconnect_error", () => { lastFailAt = Date.now(); });
+    socket.io.on("reconnect", (n) => say(`noi lai thanh cong o lan ${n}`));
+    socket.io.on("reconnect_failed", () => slowRetry(SLOW_RETRY_MS, "het so lan thu"));
+    socket.on("connect_error", (err) => {
+      if (socket.active) return;
+      if (err.message === "rate_limited") return slowRetry(err.data?.retryAfterMs ?? SLOW_RETRY_MS, "server bao qua tai");
+      setBanner("rejected", "Phien dang nhap het han", "Vui long dang nhap lai");
+      say(`server tu choi: ${err.message}`);
+    });
+
+    function slowRetry(ms, why) {
+      clearTimeout(retryTimer);
+      setBanner("waiting-network", "Khong co ket noi", `Tu thu lai sau ${fmt(ms)}`);
+      say(`${why} -> thu lai sau ${fmt(ms)}`);
+      retryTimer = setTimeout(() => { lastFailAt = Date.now(); socket.connect(); }, ms);
+    }
+
+    // Dien thoai bao "co mang lai" -> thu ngay, khong doi het nhip backoff
+    window.addEventListener("online", () => {
+      if (socket.connected) return;
+      say("he dieu hanh bao co mang -> thu ket noi ngay");
+      clearTimeout(retryTimer);
+      socket.disconnect().connect();
+    });
+  </script>
+</body>
+</html>
