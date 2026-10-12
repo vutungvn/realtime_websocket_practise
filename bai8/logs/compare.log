@@ -1,0 +1,15 @@
+15:11:13.105 [THI-NGHIEM] SCALE=10: LB cat sau 6000ms, nhip tim 1000ms, poll 500ms, 40 man hinh moi giai phap
+15:11:13.428 [THI-NGHIEM] PHA 1 - GIO CAO DIEM: thay doi ~moi 5s, 5 phut
+15:11:44.630 [THI-NGHIEM] PHA 2 - BAN DEM: 5 phut KHONG co thay doi nao; them 40 man hinh SSE "ngay tho" (khong nhip tim)
+15:12:14.889 [THI-NGHIEM] PHA 3 - MANG KHO ROT 90 GIAY (qua nguong LB 60s), co 2 canh bao phat sinh luc rot
+15:12:25.009 [THI-NGHIEM] ==================== KET QUA (quy ve thoi gian that) ====================
+15:12:25.010 [THI-NGHIEM] PHA 1 cao diem 5 phut, 10 canh bao:
+15:12:25.011 [THI-NGHIEM]   POLLING : 2439 request, 967KB tai xuong | do tre canh bao TB 1.6s, toi da 4.7s
+15:12:25.012 [THI-NGHIEM]   SSE     : 0 request moi (giu 40 ket noi), 412KB tai xuong | do tre canh bao TB 5ms, toi da 8ms
+15:12:25.013 [THI-NGHIEM] PHA 2 ban dem 5 phut, 0 thay doi:
+15:12:25.037 [THI-NGHIEM]   POLLING : 2337 request (gan nhu toan 304 vo ich), 420KB -> ~673.056 request/ngay
+15:12:25.037 [THI-NGHIEM]   SSE+nhip tim: LB cat 0 lan, noi lai 0 lan, 52KB nhip tim -> ~14.5MB/ngay
+15:12:25.038 [THI-NGHIEM]   SSE ngay tho (khong nhip tim): LB cat 160 lan, noi lai 160 lan -> ~46.080 lan noi lai/ngay
+15:12:25.038 [THI-NGHIEM] PHA 3 mang rot 90s:
+15:12:25.039 [THI-NGHIEM]   SSE    : 80/80 canh bao toi du, 2.0s sau khi mang hoi phuc | noi lai bang Last-Event-ID 40 lan, snapshot 0 lan
+15:12:25.039 [THI-NGHIEM]   POLLING: 80/80 canh bao toi du, 5.6s sau khi mang hoi phuc

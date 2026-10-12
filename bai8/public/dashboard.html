@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Bảng điều khiển kho</title>
+  <style>
+    :root { --bg: #0f1419; --panel: #1a2129; --line: #2a333d; --text: #e6edf3; --muted: #8b98a5; --ok: #3fb950; --warn: #d29922; --bad: #f85149; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
+    header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line); }
+    header h1 { font-size: 22px; margin: 0; flex: 1; }
+    .conn { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); }
+    .dot.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .dot.connecting, .dot.reconnecting { background: var(--warn); animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: .3; } }
+    #stale { display: none; background: var(--bad); color: #fff; text-align: center; font-size: 22px; font-weight: 700; padding: 14px; }
+    main { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 20px; padding: 24px; }
+    .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+    .tile .label { color: var(--muted); font-size: 16px; text-transform: uppercase; letter-spacing: .04em; }
+    .tile .value { font-size: clamp(40px, 6vw, 84px); font-weight: 700; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    .tile .sub { color: var(--muted); margin-top: 6px; font-size: 14px; }
+    .flash { animation: flash 1s; } @keyframes flash { from { color: var(--ok); } }
+    .alerts { grid-row: span 2; }
+    .alert { border-left: 6px solid var(--warn); background: #2a2416; padding: 12px 14px; border-radius: 8px; margin-top: 12px; }
+    .alert.out { border-color: var(--bad); background: #2d1a1a; }
+    .alert .t { font-size: 20px; font-weight: 700; }
+    .alert .m { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .alert.new { animation: pulse 1s 4; } @keyframes pulse { 50% { background: #5a1d1d; } }
+    .empty { color: var(--muted); margin-top: 12px; }
+    footer { padding: 0 24px 20px; color: var(--muted); font-size: 13px; display: flex; gap: 24px; flex-wrap: wrap; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } .alerts { grid-row: auto; } }
+  </style>
+</head>
+<body>
+  <div id="stale">⚠ MẤT KẾT NỐI <span id="staleFor"></span> — SỐ LIỆU CÓ THỂ ĐÃ CŨ, ĐANG TỰ KẾT NỐI LẠI</div>
+  <header>
+    <h1>📦 Kho ShopFast — Vận hành</h1>
+    <div class="conn"><span class="dot" id="dot"></span><span id="connText">Đang kết nối…</span></div>
+  </header>
+  <main>
+    <div class="tile"><div class="label">Đơn mới hôm nay</div><div class="value" id="orders">–</div><div class="sub" id="ordersSub"></div></div>
+    <div class="tile"><div class="label">Doanh thu</div><div class="value" id="revenue">–</div><div class="sub">VND</div></div>
+    <div class="tile alerts"><div class="label">Cảnh báo tồn kho</div><div id="alerts"><div class="empty">Không có cảnh báo</div></div></div>
+    <div class="tile" style="grid-column: span 2">
+      <div class="label">Tình trạng luồng dữ liệu</div>
+      <div class="sub" id="health" style="font-size:16px;color:var(--text);margin-top:10px"></div>
+    </div>
+  </main>
+  <footer id="foot"></footer>
+
+  <script src="/reliable-sse.js"></script>
+  <script>
+    // ?mode=poll  -> chay giai phap polling 5s de so sanh
+    // ?hb=0       -> tat nhip tim de thay bo can bang tai cat ket noi moi 60s
+    const q = new URLSearchParams(location.search);
+    const MODE = q.get("mode") === "poll" ? "poll" : "sse";
+    const $ = (id) => document.getElementById(id);
+    const vnd = (n) => n.toLocaleString("vi-VN");
+    const dur = (ms) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`);
+    const time = (t) => new Date(t).toLocaleTimeString("vi-VN", { hour12: false });
+
+    let state = { newOrders: 0, revenue: 0, lastOrderAt: null, alerts: [] };
+    let lastChangeAt = null, lastHeartbeat = null, conn = { state: "connecting", downSince: Date.now() }, reconnects = 0, lastLatency = null;
+    let lastMessageAt = Date.now(), heartbeatMs = null; // moi goi tin (ke ca nhip tim) -> phat hien im lang som
+    const MAX_ALERTS = 50; // man hinh chay 24/7: gioi han danh sach, khong ro ri bo nho
+
+    function render() {
+      $("orders").textContent = vnd(state.newOrders);
+      $("revenue").textContent = vnd(state.revenue);
+      $("ordersSub").textContent = state.lastOrderAt ? `Đơn gần nhất ${time(state.lastOrderAt)}` : "";
+      const list = state.alerts.slice().sort((a, b) => b.createdAt - a.createdAt);
+      $("alerts").innerHTML = list.length ? "" : '<div class="empty">Không có cảnh báo</div>';
+      for (const a of list) {
+        const el = document.createElement("div");
+        el.className = `alert ${a.level}` + (a.isNew ? " new" : "");
+        el.innerHTML = `<div class="t"></div><div class="m"></div>`;
+        el.querySelector(".t").textContent = `${a.level === "out" ? "HẾT HÀNG" : "Sắp hết"}: ${a.name} (còn ${a.qty})`;
+        el.querySelector(".m").textContent = `${a.sku} · phát sinh ${time(a.createdAt)}` + (a.latencyMs !== undefined ? ` · tới màn hình sau ${dur(a.latencyMs)}` : "");
+        $("alerts").append(el);
+        a.isNew = false;
+      }
+    }
+
+    function renderHealth() {
+      const now = Date.now();
+      const live = conn.state === "live";
+      $("dot").className = `dot ${conn.state}`;
+      $("connText").textContent = live ? (MODE === "poll" ? "Polling 5s" : "Trực tiếp (SSE)") : conn.state === "connecting" ? "Đang kết nối…" : "Mất kết nối – đang tự nối lại";
+      const downFor = conn.downSince ? Math.round((now - conn.downSince) / 1000) : 0;
+      // Treo tuong khong nguoi trong: KHONG duoc hien so lieu cu ma khong bao. Bao khi:
+      //  - mat ket noi >= 10s, hoac
+      //  - ket noi "van mo" nhung qua 2 nhip tim khong nghe gi (mang treo) -> bao som ~22s, khong doi watchdog.
+      const silentFor = now - lastMessageAt;
+      const silent = MODE === "sse" && heartbeatMs && q.get("hb") !== "0" && silentFor > heartbeatMs * 2 + 2000;
+      const stale = (!live && downFor >= 10) || silent;
+      $("stale").style.display = stale ? "block" : "none";
+      $("staleFor").textContent = `${silent && live ? Math.round(silentFor / 1000) : downFor}S`;
+      const quiet = lastChangeAt ? Math.round((now - lastChangeAt) / 1000) : null;
+      const hb = lastHeartbeat ? Math.round((now - lastHeartbeat) / 1000) : null;
+      $("health").innerHTML =
+        `Thay đổi gần nhất: <b>${quiet === null ? "—" : quiet + "s trước"}</b> · ` +
+        (MODE === "sse" ? `Nhịp tim gần nhất: <b>${hb === null ? "—" : hb + "s trước"}</b> · ` : "") +
+        `Số lần nối lại: <b>${reconnects}</b>` +
+        (lastLatency !== null ? ` · Cảnh báo gần nhất tới sau: <b>${dur(lastLatency)}</b>` : "") +
+        (quiet !== null && quiet > 60 && live ? `<br>Không có thay đổi nhưng kết nối vẫn sống (ban đêm là bình thường).` : "");
+      $("foot").textContent = `Chế độ: ${MODE.toUpperCase()}${q.get("hb") === "0" ? " (TẮT nhịp tim)" : ""} · Last-Event-ID: ${conn.lastEventId ?? "—"}`;
+    }
+    setInterval(renderHealth, 1000);
+
+    function applyAlert(a) {
+      a.latencyMs = Date.now() - a.createdAt;
+      a.isNew = true;
+      lastLatency = a.latencyMs;
+      state.alerts = state.alerts.filter((x) => x.sku !== a.sku).concat(a).slice(-MAX_ALERTS);
+    }
+
+    if (MODE === "sse") {
+      fetch("/api/config").then((r) => r.json()).then((cfg) => {
+        heartbeatMs = cfg.heartbeatMs;
+        ReliableStream.create({
+          url: "/stream" + (q.get("hb") === "0" ? "?hb=0" : ""),
+          // ?hb=0: gia lap ban cai dat "ngay tho" (khong nhip tim, khong watchdog) de thay LB cat ket noi
+          watchdogMs: q.get("hb") === "0" ? 1e9 : cfg.watchdogMs,
+          retryMs: cfg.retryMs,
+          log: (m) => console.log("[sse]", m),
+          onStatus: (s) => {
+            if (s.state !== "live" && conn.state === "live") reconnects++;
+            conn = s;
+            renderHealth();
+          },
+          onEvent: (type, data) => {
+            lastMessageAt = Date.now();
+            if (type === "heartbeat") { lastHeartbeat = Date.now(); return; }
+            lastChangeAt = Date.now();
+            if (type === "snapshot") state = data;
+            else if (type === "metrics") Object.assign(state, data);
+            else if (type === "stock-alert") applyAlert(data);
+            else if (type === "stock-cleared") state.alerts = state.alerts.filter((x) => x.sku !== data.sku);
+            render();
+          },
+        });
+      });
+    } else {
+      // GIAI PHAP SO SANH: polling 5s co ETag
+      let etag = null;
+      async function poll() {
+        try {
+          const r = await fetch("/api/snapshot", { headers: etag ? { "If-None-Match": etag } : {} });
+          if (conn.state !== "live") { conn = { state: "live" }; }
+          if (r.status === 200) {
+            etag = r.headers.get("ETag");
+            const { state: s } = await r.json();
+            const known = new Set(state.alerts.map((a) => a.alertId));
+            s.alerts.filter((a) => !known.has(a.alertId)).forEach(applyAlert);
+            state = { ...s, alerts: s.alerts.map((a) => state.alerts.find((x) => x.alertId === a.alertId) || a) };
+            lastChangeAt = Date.now();
+            render();
+          } else if (r.status !== 304) throw new Error(r.status);
+        } catch {
+          if (conn.state === "live") { conn = { state: "reconnecting", downSince: Date.now() }; reconnects++; }
+        }
+        renderHealth();
+        setTimeout(poll, 5000);
+      }
+      poll();
+    }
+  </script>
+</body>
+</html>
