@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Tài xế</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header>
+    <h1>🛵 Tài xế: <span id="who">…</span></h1>
+    <span class="badge" id="conn">đang kết nối</span>
+    <button id="shift" class="primary">Vào ca</button>
+    <label class="row"><input type="checkbox" id="auto" checked /> Tự lái (giả lập GPS)</label>
+    <button id="drop" class="danger">💥 Ngắt đột ngột</button>
+  </header>
+  <main class="grid3">
+    <div style="display:grid;gap:14px">
+      <div class="card" id="offerBox" hidden>
+        <div class="offer">
+          <b>🔔 Đơn mới <span id="offerId"></span></b> <span class="muted" id="offerBy"></span>
+          <div id="offerInfo" style="margin:6px 0"></div>
+          <div class="row"><button class="primary" id="accept">Nhận đơn</button><button id="reject">Từ chối</button><span class="muted" id="countdown"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Đơn đang làm</h2>
+        <div id="current" class="muted">Không có đơn.</div>
+        <div class="row" style="margin-top:8px"><button id="picked" disabled>Đã lấy hàng</button><button id="delivered" disabled>Đã giao</button></div>
+        <div class="msg" id="msg"></div>
+      </div>
+      <div class="card"><h2>Sự kiện tôi nhận được</h2><div class="log" id="log"></div></div>
+    </div>
+    <div class="card"><h2>Bản đồ</h2><div class="map" id="map"></div><div class="muted" id="pos"></div></div>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/common.js"></script>
+  <script>
+    const { $, esc } = App;
+    const userId = new URLSearchParams(location.search).get("user") || "d-hung";
+    let me = null, current = null, offer = null, pos = null, client = null;
+
+    function render() {
+      $("shift").textContent = me?.onShift ? "Nghỉ ca" : "Vào ca";
+      $("offerBox").hidden = !offer;
+      if (offer) {
+        $("offerId").textContent = offer.orderId;
+        $("offerBy").textContent = offer.byDispatcher ? "(điều phối viên giao)" : "(tự động)";
+        $("offerInfo").innerHTML = `Lấy: ${esc(offer.pickup.address)}<br>Giao: ${esc(offer.dropoff.address)}<br><span class="muted">Cách bạn ${offer.distanceKm} km</span>`;
+      }
+      $("current").innerHTML = current
+        ? `<b>${current.id}</b> <span class="badge b-${current.status}">${App.STATUS[current.status]}</span><br>Lấy: ${esc(current.pickup.address)}<br>Giao: ${esc(current.dropoff.address)}<br><span class="muted">Khách: ${esc(current.customer.name)} · ${esc(current.customer.phoneMasked)}</span>`
+        : "Không có đơn.";
+      $("picked").disabled = current?.status !== "assigned";
+      $("delivered").disabled = current?.status !== "picked_up";
+      const marks = [{ point: pos, color: "#ee4d2d", label: "Tôi" }];
+      const target = current || offer;
+      if (target) marks.push({ point: target.pickup, color: "#b26a00", label: "Lấy hàng", shape: "square" }, { point: target.dropoff, color: "#1a7f37", label: "Giao", shape: "ring" });
+      App.drawMap($("map"), marks);
+      $("pos").textContent = pos ? `GPS: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` : "";
+    }
+    setInterval(() => {
+      if (offer) $("countdown").textContent = `còn ${Math.max(0, Math.round((offer.expiresAt - Date.now()) / 1000))}s`;
+    }, 500);
+
+    // Gia lap GPS: moi 2s di 1 buoc toi diem lay hang / giao hang roi gui vi tri len server
+    setInterval(() => {
+      if (!client || !pos || !$("auto").checked || !me?.onShift) return;
+      if (current) {
+        const target = current.status === "assigned" ? current.pickup : current.dropoff;
+        const next = App.stepTowards(pos, target);
+        pos = { lat: next.lat, lng: next.lng };
+      }
+      client.socket.emit("driver:location", pos);
+      render();
+    }, 2000);
+
+    App.connect(userId, "driver", {
+      onConn: (s, d) => { $("conn").className = `badge b-${s}`; $("conn").textContent = s === "error" ? `bị từ chối: ${d}` : s; },
+      onReady: ({ user, snapshot }) => {
+        $("who").textContent = user.name;
+        me = snapshot.driver; current = snapshot.currentOrder; offer = snapshot.offer;
+        pos = pos || me.location; render();
+      },
+      onAnyEvent: (name, data) => {
+        App.log($("log"), name, data);
+        if (name === "offer:new") offer = data.offer;
+        if (name === "offer:closed") {
+          if (offer?.orderId === data.orderId) offer = null;
+          if (current?.id === data.orderId && data.reason !== "accepted") { current = null; $("msg").textContent = `Đơn ${data.orderId} đã bị thu hồi (${data.reason}).`; }
+        }
+        if (name === "order:updated") current = ["delivered", "cancelled"].includes(data.order.status) ? null : data.order;
+        render();
+      },
+    }).then((c) => {
+      client = c;
+      const act = async (name, payload) => { const r = await c.emit(name, payload); $("msg").textContent = r.ok ? "" : r.error; return r; };
+      $("shift").onclick = async () => { const r = await act("driver:shift", { onShift: !me?.onShift }); if (r.ok) { me = r.driver; render(); } };
+      $("accept").onclick = async () => { const id = offer.orderId; const r = await act("offer:respond", { orderId: id, accept: true }); if (r.ok) { current = r.order; offer = null; render(); } };
+      $("reject").onclick = async () => { await act("offer:respond", { orderId: offer.orderId, accept: false }); offer = null; render(); };
+      $("picked").onclick = async () => { const r = await act("order:progress", { orderId: current.id, status: "picked_up" }); if (r.ok) { current = r.order; render(); } };
+      $("delivered").onclick = async () => { const r = await act("order:progress", { orderId: current.id, status: "delivered" }); if (r.ok) { current = null; render(); } };
+      $("drop").onclick = () => App.hardDrop(c.socket);
+    }).catch((e) => { $("msg").textContent = e.message; });
+  </script>
+</body>
+</html>

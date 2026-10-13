@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Điều phối</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header><h1>🎯 Trung tâm điều phối — <span id="who">…</span></h1><span class="muted" id="kpi"></span><span class="badge" id="conn">đang kết nối</span></header>
+  <main>
+    <div class="grid3">
+      <div class="card"><h2>Bản đồ: tài xế & đơn đang chạy</h2><div class="map" id="map"></div>
+        <div class="muted">● xanh: rảnh · ● cam: đang được mời · ● lam: đang giao · ○ xám: mất kết nối/offline · ■ điểm lấy hàng</div></div>
+      <div style="display:grid;gap:14px;align-content:start">
+        <div class="card"><h2>Cảnh báo</h2><div id="alerts" class="muted">Không có cảnh báo</div></div>
+        <div class="card"><h2>Tài xế</h2><table id="drivers"></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Đơn hàng</h2>
+      <div class="row" style="margin-bottom:8px"><label><input type="checkbox" id="onlyActive" checked /> Chỉ đơn đang chạy</label><span class="msg" id="msg"></span></div>
+      <table id="orders"></table>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Tài nguyên server (kiểm tra rò rỉ)</h2><pre id="res" class="log"></pre></div>
+      <div class="card"><h2>Sự kiện nhận được</h2><div class="log" id="log"></div></div>
+    </div>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/common.js"></script>
+  <script>
+    const { $, esc, time, ago, STATUS } = App;
+    const userId = new URLSearchParams(location.search).get("user") || "op-ha";
+    const orders = new Map(), drivers = new Map(), alerts = new Map();
+    let client = null, token = null;
+    const chosen = new Map(); // orderId -> driverId dieu phoi dang chon (khong mat khi ve lai)
+    const DOT = { idle: "#1a7f37", offered: "#b26a00", busy: "#0969da" };
+
+    function render() {
+      const active = [...orders.values()].filter((o) => !["delivered", "cancelled"].includes(o.status));
+      const list = ($("onlyActive").checked ? active : [...orders.values()]).sort((a, b) => b.createdAt - a.createdAt);
+      const idle = [...drivers.values()].filter((d) => d.presence === "online" && d.onShift && d.activity === "idle");
+      $("kpi").textContent = `${active.length} đơn đang chạy · ${active.filter((o) => o.stuck).length} đơn tắc · ${idle.length} tài xế rảnh`;
+
+      const options = (o) => `<option value="">— chọn tài xế rảnh —</option>` + [...drivers.values()].map((d) => `<option value="${d.id}" ${chosen.get(o.id) === d.id ? "selected" : ""} ${d.presence !== "online" || !d.onShift || d.activity !== "idle" ? "disabled" : ""}>${esc(d.name)} (${d.presence !== "online" ? d.presence : !d.onShift ? "nghỉ" : d.activity})</option>`).join("");
+      // Dang mo o chon tai xe -> khong ve lai bang (tranh dong o chon giua chung)
+      if (document.activeElement?.tagName !== "SELECT") $("orders").innerHTML = "<tr><th>Đơn</th><th>Trạng thái</th><th>Khách</th><th>Tài xế</th><th>Đã từ chối</th><th>Can thiệp</th></tr>" + list.map((o) => {
+        const can = ["pending", "offered", "assigned"].includes(o.status);
+        return `<tr class="${o.stuck ? "stuck" : ""}"><td><b>${o.id}</b>${o.stuck ? ' <span class="badge b-error">TẮC</span>' : ""}<div class="muted">${esc(o.pickup.address)} → ${esc(o.dropoff.address)}</div></td>
+          <td><span class="badge b-${o.status}">${STATUS[o.status]}</span><div class="muted">${ago(o.statusSince)} ở trạng thái này</div></td>
+          <td>${esc(o.customer.name)}<div class="muted">${esc(o.customer.phone)}</div></td>
+          <td>${o.driver ? esc(o.driver.name) : "—"}</td><td class="muted">${o.rejectedBy.join(", ") || "—"}</td>
+          <td>${can ? `<div class="row"><select data-sel="${o.id}">${options(o)}</select><button data-assign="${o.id}">Giao</button><button class="danger" data-cancel="${o.id}">Huỷ</button></div>` : ""}</td></tr>`;
+      }).join("");
+
+      $("drivers").innerHTML = "<tr><th>Tài xế</th><th>Kết nối</th><th>Ca</th><th>Việc</th><th>Tín hiệu cuối</th></tr>" + [...drivers.values()].map((d) =>
+        `<tr><td><b>${esc(d.name)}</b><div class="muted">${esc(d.vehicle)}</div></td><td><span class="badge b-${d.presence}">${d.presence}</span></td>
+         <td>${d.onShift ? "trong ca" : "nghỉ"}</td><td><span class="badge b-${d.activity}">${d.activity}</span> ${d.currentOrderId ?? ""}</td><td class="muted">${ago(d.lastSeenAt)}</td></tr>`).join("");
+
+      const al = [...alerts.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 12);
+      $("alerts").innerHTML = al.length ? al.map((a) => `<div class="alert ${a.status}"><b>${a.kind === "order_stuck" ? "⏳ Đơn tắc" : "📵 Tài xế mất kết nối"}</b> · ${time(a.createdAt)} · <i>${a.status}${a.handledBy ? " bởi " + esc(a.handledBy) : ""}</i><br>${esc(a.message)}
+        ${a.status === "open" ? `<div><button data-ack="${a.id}">Tôi xử lý</button></div>` : ""}</div>`).join("") : "Không có cảnh báo";
+
+      const marks = [...drivers.values()].map((d) => ({ point: d.location, color: d.presence !== "online" ? "#8b98a5" : DOT[d.activity], label: d.name, shape: d.presence !== "online" ? "ring" : "dot" }));
+      active.forEach((o) => marks.push({ point: o.pickup, color: o.stuck ? "#cf222e" : "#b26a00", label: o.id, shape: "square" }));
+      App.drawMap($("map"), marks);
+    }
+    setInterval(render, 1000);
+
+    async function refreshResources() {
+      if (!token) return;
+      const r = await fetch("/debug/resources", { headers: { Authorization: `Bearer ${token}` } }).then((x) => x.json()).catch(() => null);
+      if (r) $("res").textContent = JSON.stringify(r, null, 2);
+    }
+    setInterval(refreshResources, 1000);
+
+    App.connect(userId, "dispatcher", {
+      onConn: (s, d) => { $("conn").className = `badge b-${s}`; $("conn").textContent = s === "error" ? `bị từ chối: ${d}` : s; },
+      onReady: ({ user, snapshot }) => {
+        $("who").textContent = user.name;
+        orders.clear(); drivers.clear(); alerts.clear();
+        snapshot.orders.forEach((o) => orders.set(o.id, o));
+        snapshot.drivers.forEach((d) => drivers.set(d.id, d));
+        snapshot.alerts.forEach((a) => alerts.set(a.id, a));
+        render();
+      },
+      onAnyEvent: (name, data) => {
+        if (name !== "driver:updated") App.log($("log"), name, data); // vi tri cap nhat lien tuc -> khong ghi de nhat ky
+        if (name === "order:updated") orders.set(data.order.id, data.order);
+        if (name === "driver:updated") drivers.set(data.driver.id, data.driver);
+        if (name === "alert:raised") alerts.set(data.alert.id, data.alert);
+        if (name === "alert:updated" && alerts.has(data.alertId)) Object.assign(alerts.get(data.alertId), { status: data.status, handledBy: data.handledBy });
+      },
+    }).then(async (c) => {
+      client = c;
+      token = (await (await fetch("/auth/demo-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) })).json()).token;
+      document.addEventListener("change", (e) => { if (e.target.dataset.sel) chosen.set(e.target.dataset.sel, e.target.value); });
+      document.addEventListener("click", async (e) => {
+        const t = e.target.dataset;
+        let r;
+        if (t.assign) {
+          const driverId = document.querySelector(`[data-sel="${t.assign}"]`).value;
+          if (!driverId) { $("msg").textContent = "Hãy chọn một tài xế đang rảnh trước khi giao."; return; }
+          r = await c.emit("dispatch:assign", { orderId: t.assign, driverId });
+        }
+        if (t.cancel) { const reason = prompt("Lý do huỷ?", "Khách gọi huỷ"); if (reason) r = await c.emit("dispatch:cancel", { orderId: t.cancel, reason }); }
+        if (t.ack) r = await c.emit("alert:ack", { alertId: t.ack });
+        if (r) $("msg").textContent = r.ok ? "" : r.error;
+      });
+    }).catch((e) => { $("msg").textContent = e.message; });
+  </script>
+</body>
+</html>

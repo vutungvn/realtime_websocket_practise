@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast Dispatch</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header><h1>🚚 ShopFast — Trung tâm điều phối (demo)</h1></header>
+  <main style="max-width:900px;margin:auto">
+    <div class="card">
+      <h2>Chọn vai để mở (mỗi vai một tab, mở song song)</h2>
+      <table id="users"></table>
+      <p class="muted">Gợi ý demo: 1 tab điều phối + 3 tab tài xế + 2 tab khách, xếp cạnh nhau.</p>
+    </div>
+    <div class="card">
+      <h2>Thử kết nối KHÔNG có token</h2>
+      <div class="row"><button id="noToken">Kết nối không token</button><button id="badToken">Kết nối với token giả</button></div>
+      <pre id="result" class="log" style="margin-top:8px"></pre>
+    </div>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const PAGE = { customer: "customer.html", driver: "driver.html", dispatcher: "dispatcher.html" };
+    const ROLE = { customer: "Khách hàng", driver: "Tài xế", dispatcher: "Điều phối viên" };
+    fetch("/auth/users").then((r) => r.json()).then((users) => {
+      document.getElementById("users").innerHTML = users.map((u) =>
+        `<tr><td><b>${u.name}</b></td><td>${ROLE[u.role]}</td><td><a href="/${PAGE[u.role]}?user=${u.id}" target="_blank">Mở tab ↗</a></td></tr>`).join("");
+    });
+    function tryConnect(auth) {
+      const out = document.getElementById("result");
+      const s = io({ auth, transports: ["websocket"], reconnection: false, forceNew: true });
+      s.on("connect", () => (out.textContent = "⚠ Kết nối được (KHÔNG mong đợi)"));
+      s.on("connect_error", (e) => (out.textContent = `✅ Server từ chối ngay tại bước bắt tay: ${e.message}\n(không vào được room nào, không nhận được dữ liệu nào)`));
+    }
+    document.getElementById("noToken").onclick = () => tryConnect({});
+    document.getElementById("badToken").onclick = () => tryConnect({ token: "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiZGlzcGF0Y2hlciJ9.gia-mao" });
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShopFast - Khách hàng</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header><h1>🛍 Khách hàng: <span id="who">…</span></h1><span class="badge" id="conn">đang kết nối</span><button id="drop" class="danger">💥 Ngắt đột ngột</button></header>
+  <main class="grid3">
+    <div style="display:grid;gap:14px">
+      <div class="card">
+        <h2>Đặt đơn</h2>
+        <div class="row">
+          Lấy tại <select id="pickup"></select> giao tới <select id="dropoff"></select>
+          <button class="primary" id="place">Đặt đơn</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+      <div class="card"><h2>Đơn của tôi</h2><table id="orders"></table></div>
+      <div class="card"><h2>Sự kiện tôi nhận được</h2><div class="log" id="log"></div></div>
+    </div>
+    <div class="card"><h2>Theo dõi tài xế (chỉ khi đơn của bạn đang được giao)</h2><div class="map" id="map"></div><div class="muted" id="track"></div></div>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/common.js"></script>
+  <script>
+    const { $, esc, time, ago, STATUS, PLACES } = App;
+    const userId = new URLSearchParams(location.search).get("user") || "c-lan";
+    const orders = new Map();
+    const couriers = new Map(); // orderId -> {lat,lng,at}
+    PLACES.forEach((p, i) => { $("pickup").add(new Option(p.address, i)); $("dropoff").add(new Option(p.address, i)); });
+    $("dropoff").value = 3;
+
+    function render() {
+      const list = [...orders.values()].sort((a, b) => b.createdAt - a.createdAt);
+      $("orders").innerHTML = "<tr><th>Đơn</th><th>Trạng thái</th><th>Tài xế</th><th>Hành trình</th></tr>" + list.map((o) =>
+        `<tr><td><b>${o.id}</b><div class="muted">${time(o.createdAt)}</div></td>
+         <td><span class="badge b-${o.status}">${STATUS[o.status]}</span><div class="muted">${ago(o.statusSince)} trước</div></td>
+         <td>${o.driver ? `${esc(o.driver.name)}<div class="muted">${esc(o.driver.vehicle)}</div>` : '<span class="muted">chưa có</span>'}</td>
+         <td class="muted">${esc(o.pickup.address)} → ${esc(o.dropoff.address)}</td></tr>`).join("");
+      const tracking = list.filter((o) => ["assigned", "picked_up"].includes(o.status));
+      const marks = [];
+      tracking.forEach((o) => {
+        marks.push({ point: o.pickup, color: "#b26a00", label: `Lấy ${o.id}`, shape: "square" });
+        marks.push({ point: o.dropoff, color: "#1a7f37", label: `Giao ${o.id}`, shape: "ring" });
+        const c = couriers.get(o.id);
+        if (c) marks.push({ point: c, color: "#ee4d2d", label: `🛵 ${o.driver?.name ?? ""}` });
+      });
+      App.drawMap($("map"), marks);
+      $("track").textContent = tracking.length ? tracking.map((o) => `${o.id}: vị trí cập nhật ${couriers.get(o.id) ? ago(couriers.get(o.id).at) + " trước" : "đang chờ"}`).join(" · ") : "Không có đơn đang giao — không được xem vị trí tài xế.";
+    }
+    setInterval(render, 1000);
+
+    App.connect(userId, "customer", {
+      onConn: (s, d) => { $("conn").className = `badge b-${s}`; $("conn").textContent = s === "error" ? `bị từ chối: ${d}` : s; },
+      onReady: ({ user, snapshot }) => { $("who").textContent = user.name; orders.clear(); snapshot.orders.forEach((o) => orders.set(o.id, o)); render(); },
+      onAnyEvent: (name, data) => {
+        App.log($("log"), name, data);
+        if (name === "order:updated") orders.set(data.order.id, data.order);
+        if (name === "courier:location") couriers.set(data.orderId, data);
+        render();
+      },
+    }).then((c) => {
+      window.client = c;
+      $("place").onclick = async () => {
+        const r = await c.emit("order:place", { pickup: PLACES[$("pickup").value], dropoff: PLACES[$("dropoff").value] });
+        $("msg").textContent = r.ok ? "" : r.error;
+      };
+      $("drop").onclick = () => App.hardDrop(c.socket);
+    }).catch((e) => { $("msg").textContent = e.message; });
+  </script>
+</body>
+</html>

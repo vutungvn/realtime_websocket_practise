@@ -1,0 +1,124 @@
+20:50:32.441 [DEMO      ] ========== 0. Ke la ket noi KHONG token / token gia ==========
+20:50:32.455 [KE-LA     ] bi tu choi tai buoc bat tay: AUTH_REQUIRED
+20:50:32.459 [KE-LA     ] bi tu choi tai buoc bat tay: AUTH_INVALID
+20:50:32.459 [DEMO      ] ========== 1. Ca 6 vai dang nhap va ket noi song song ==========
+20:50:32.507 [DIEU-PHOI ] <- session:ready (dispatcher Ha (dieu phoi))
+20:50:32.507 [DIEU-PHOI ] <- driver:updated Hung: online/nghi/idle
+20:50:32.508 [DIEU-PHOI ] <- driver:updated Tuan: online/nghi/idle
+20:50:32.508 [DIEU-PHOI ] <- driver:updated Mai: online/nghi/idle
+20:50:32.509 [KHACH-LAN ] <- session:ready (customer Chi Lan)
+20:50:32.509 [KHACH-MINH] <- session:ready (customer Anh Minh)
+20:50:32.510 [TX-HUNG   ] <- session:ready (driver Hung)
+20:50:32.510 [TX-TUAN   ] <- session:ready (driver Tuan)
+20:50:32.511 [TX-MAI    ] <- session:ready (driver Mai)
+20:50:32.515 [DIEU-PHOI ] <- driver:updated Hung: online/ca/idle
+20:50:32.517 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/idle
+20:50:32.517 [DEMO      ] Hung, Tuan vao ca; Mai chua vao ca
+20:50:32.517 [DEMO      ] ========== 2. Khach Lan dat don gan Hung -> tu dong moi Hung -> Hung nhan va chay ==========
+20:50:32.521 [DIEU-PHOI ] <- order:updated O-0001 = pending
+20:50:32.521 [DIEU-PHOI ] <- order:updated O-0001 = offered (tai xe Hung)
+20:50:32.521 [DIEU-PHOI ] <- driver:updated Hung: online/ca/offered
+20:50:32.522 [KHACH-LAN ] <- order:updated O-0001 = pending
+20:50:32.522 [KHACH-LAN ] <- order:updated O-0001 = pending
+20:50:32.522 [TX-HUNG   ] <- offer:new O-0001 (0.4km, tu dong)
+20:50:32.935 [DIEU-PHOI ] <- order:updated O-0001 = assigned (tai xe Hung)
+20:50:32.936 [DIEU-PHOI ] <- driver:updated Hung: online/ca/busy
+20:50:32.937 [KHACH-LAN ] <- order:updated O-0001 = assigned (tai xe Hung)
+20:50:32.938 [TX-HUNG   ] <- order:updated O-0001 = assigned
+20:50:32.939 [TX-HUNG   ] <- offer:closed O-0001: accepted
+20:50:32.940 [TX-HUNG   ] -> offer:respond NHAN O-0001
+20:50:35.035 [DEMO      ] ========== 3. Khach Minh dat don -> moi Tuan, Tuan khong tra loi -> het han -> khong con ai ranh -> DON TAC ==========
+20:50:35.039 [DIEU-PHOI ] <- order:updated O-0002 = pending
+20:50:35.040 [DIEU-PHOI ] <- order:updated O-0002 = offered (tai xe Tuan)
+20:50:35.040 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/offered
+20:50:35.041 [KHACH-MINH] <- order:updated O-0002 = pending
+20:50:35.042 [KHACH-MINH] <- order:updated O-0002 = pending
+20:50:35.043 [TX-TUAN   ] <- offer:new O-0002 (0.2km, tu dong)
+20:50:35.044 [TX-TUAN   ] (dang ban, khong tra loi loi moi O-0002)
+20:50:35.611 [DIEU-PHOI ] <- order:updated O-0001 = picked_up (tai xe Hung)
+20:50:35.612 [KHACH-LAN ] <- order:updated O-0001 = picked_up (tai xe Hung)
+20:50:35.613 [TX-HUNG   ] <- order:updated O-0001 = picked_up
+20:50:35.614 [TX-HUNG   ] -> order:progress O-0001 = picked_up
+20:50:38.042 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/idle
+20:50:38.043 [DIEU-PHOI ] <- order:updated O-0002 = pending
+20:50:38.043 [TX-TUAN   ] <- offer:closed O-0002: expired
+20:50:38.043 [KHACH-MINH] <- order:updated O-0002 = pending
+20:50:39.505 [DIEU-PHOI ] <- 🚨 alert:raised A-1 order_stuck: Đơn O-0002 chờ tài xế đã 4s (ngưỡng 4s).
+20:50:39.506 [DIEU-PHOI ] <- order:updated O-0002 = pending [TAC]
+20:50:39.581 [DEMO      ] ========== 4. Dieu phoi vien CAN THIEP: nhan xu ly canh bao, giao tay don cho Tuan ==========
+20:50:39.586 [DIEU-PHOI ] <- alert:updated A-1 = acknowledged (op-ha)
+20:50:39.587 [DIEU-PHOI ] <- order:updated O-0002 = pending [TAC]
+20:50:39.591 [DIEU-PHOI ] <- order:updated O-0002 = offered (tai xe Tuan) [TAC]
+20:50:39.591 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/offered
+20:50:39.592 [DIEU-PHOI ] -> dispatch:assign O-0002 cho Tuan: OK
+20:50:39.593 [KHACH-MINH] <- order:updated O-0002 = pending
+20:50:39.594 [TX-TUAN   ] <- offer:new O-0002 (0.2km, dieu phoi giao)
+20:50:40.001 [DIEU-PHOI ] <- alert:updated A-1 = resolved (op-ha)
+20:50:40.001 [DIEU-PHOI ] <- order:updated O-0002 = assigned (tai xe Tuan)
+20:50:40.001 [DIEU-PHOI ] <- order:updated O-0002 = assigned (tai xe Tuan)
+20:50:40.001 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/busy
+20:50:40.003 [KHACH-MINH] <- order:updated O-0002 = assigned (tai xe Tuan)
+20:50:40.004 [TX-TUAN   ] <- order:updated O-0002 = assigned
+20:50:40.004 [TX-TUAN   ] <- offer:closed O-0002: accepted
+20:50:40.005 [TX-TUAN   ] -> offer:respond NHAN O-0002
+20:50:41.471 [DIEU-PHOI ] <- order:updated O-0002 = picked_up (tai xe Tuan)
+20:50:41.471 [KHACH-MINH] <- order:updated O-0002 = picked_up (tai xe Tuan)
+20:50:41.471 [TX-TUAN   ] <- order:updated O-0002 = picked_up
+20:50:41.472 [TX-TUAN   ] -> order:progress O-0002 = picked_up
+20:50:41.592 [DEMO      ] ========== 5. Tai xe Hung MAT KET NOI DOT NGOT giua duong (mang rot) -> dieu phoi duoc bao -> Hung tu noi lai ==========
+20:50:41.592 [MANG-HUNG ] 📵 MAT MANG: 1 ket noi dang mo bi treo, ket noi moi bi tu choi
+20:50:42.623 [DIEU-PHOI ] <- driver:updated Hung: lost/ca/busy
+20:50:44.836 [DIEU-PHOI ] <- order:updated O-0002 = delivered (tai xe Tuan)
+20:50:44.836 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/idle
+20:50:44.836 [KHACH-MINH] <- order:updated O-0002 = delivered (tai xe Tuan)
+20:50:44.837 [TX-TUAN   ] <- order:updated O-0002 = delivered
+20:50:44.837 [TX-TUAN   ] -> order:progress O-0002 = delivered
+20:50:45.635 [DIEU-PHOI ] <- driver:updated Hung: offline/ca/busy
+20:50:45.635 [DIEU-PHOI ] <- 🚨 alert:raised A-2 driver_lost: Tài xế Hung mất kết nối quá 3s khi đang giao đơn O-0001.
+20:50:45.636 [DIEU-PHOI ] <- order:updated O-0001 = picked_up (tai xe Hung)
+20:50:47.603 [MANG-HUNG ] 📶 CO MANG LAI (chuyen tiep 6 goi bi giu)
+20:50:50.107 [DEMO      ] ========== 6. Mai vao ca; Lan dat them don -> Mai nhan; dieu phoi huy don nay theo yeu cau khach ==========
+20:50:50.110 [DIEU-PHOI ] <- driver:updated Mai: online/ca/idle
+20:50:50.114 [DIEU-PHOI ] <- order:updated O-0003 = pending
+20:50:50.114 [DIEU-PHOI ] <- order:updated O-0003 = offered (tai xe Tuan)
+20:50:50.115 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/offered
+20:50:50.116 [KHACH-LAN ] <- order:updated O-0003 = pending
+20:50:50.116 [KHACH-LAN ] <- order:updated O-0003 = pending
+20:50:50.117 [TX-TUAN   ] <- offer:new O-0003 (0.6km, tu dong)
+20:50:50.118 [TX-TUAN   ] (dang ban, khong tra loi loi moi O-0003)
+20:50:51.589 [TX-HUNG   ] <- session:ready (driver Hung)
+20:50:51.590 [DIEU-PHOI ] <- alert:updated A-2 = resolved
+20:50:51.590 [DIEU-PHOI ] <- order:updated O-0001 = picked_up (tai xe Hung)
+20:50:51.591 [DIEU-PHOI ] <- driver:updated Hung: online/ca/busy
+20:50:51.631 [DIEU-PHOI ] <- driver:updated Tuan: online/ca/idle
+20:50:51.632 [DIEU-PHOI ] <- order:updated O-0003 = pending
+20:50:51.632 [DIEU-PHOI ] <- order:updated O-0003 = cancelled
+20:50:51.633 [DIEU-PHOI ] -> dispatch:cancel O-0003: OK
+20:50:51.634 [DEMO      ] ========== 7. Doi cac don giao xong ==========
+20:50:51.635 [TX-TUAN   ] <- offer:closed O-0003: cancelled
+20:50:51.637 [KHACH-LAN ] <- order:updated O-0003 = pending
+20:50:51.637 [KHACH-LAN ] <- order:updated O-0003 = cancelled
+20:50:57.202 [DIEU-PHOI ] <- order:updated O-0001 = delivered (tai xe Hung)
+20:50:57.202 [DIEU-PHOI ] <- driver:updated Hung: online/ca/idle
+20:50:57.203 [KHACH-LAN ] <- order:updated O-0001 = delivered (tai xe Hung)
+20:50:57.206 [TX-HUNG   ] <- order:updated O-0001 = delivered
+20:50:57.206 [TX-HUNG   ] -> order:progress O-0001 = delivered
+20:50:57.264 [DEMO      ] ========== 8. Kiem tra PHAM VI du lieu moi vai nhan duoc ==========
+20:50:57.265 [KIEM-TRA  ] DUNG | Lan chi thay don cua minh ["O-0001","O-0003"]
+20:50:57.265 [KIEM-TRA  ] DUNG | Minh chi thay don cua minh ["O-0002"]
+20:50:57.265 [KIEM-TRA  ] DUNG | Lan nhan 47 vi tri tai xe, Minh nhan 16 - MOI vi tri deu thuoc don cua chinh nguoi do
+20:50:57.265 [KIEM-TRA  ] DUNG | Hung chi duoc moi don ["O-0001"]
+20:50:57.266 [KIEM-TRA  ] DUNG | Lan: 0 driver:updated, 0 alert (thong tin noi bo dieu phoi)
+20:50:57.267 [KIEM-TRA  ] DUNG | Minh: 0 driver:updated, 0 alert (thong tin noi bo dieu phoi)
+20:50:57.267 [KIEM-TRA  ] DUNG | Hung: 0 driver:updated, 0 alert (thong tin noi bo dieu phoi)
+20:50:57.268 [KIEM-TRA  ] DUNG | Tuan: 0 driver:updated, 0 alert (thong tin noi bo dieu phoi)
+20:50:57.270 [KIEM-TRA  ] DUNG | Mai: 0 driver:updated, 0 alert (thong tin noi bo dieu phoi)
+20:50:57.271 [KIEM-TRA  ] DUNG | Lan: 0 offer:new (khach khong thay loi moi tai xe)
+20:50:57.271 [KIEM-TRA  ] DUNG | Minh: 0 offer:new (khach khong thay loi moi tai xe)
+20:50:57.273 [KIEM-TRA  ] DUNG | Dieu phoi thay toan canh: 3 don, 82 cap nhat tai xe, 2 canh bao
+20:50:57.275 [DEMO      ] ========== 9. NGAT DOT NGOT TAT CA client (RST) -> tai nguyen server ve 0 ==========
+20:50:57.277 [MANG      ] ✂️  cat ngang 5 ket noi (RST)
+20:50:57.278 [MANG-HUNG ] ✂️  cat ngang 1 ket noi (RST)
+20:51:00.798 [KIEM-TRA  ] tai nguyen sau khi moi client roi di: {"sockets":0,"rooms":0,"sessionTimers":0,"offerTimers":0,"graceTimers":0,"driverSockets":0,"openAlerts":0,"rejectedHandshakes":2}
+20:51:00.798 [KIEM-TRA  ] DUNG | sockets=0, rooms=0, sessionTimers=0, driverSockets=0, graceTimers=0, offerTimers=0
+20:51:00.801 [KIEM-TRA  ] DUNG | server van song: dang nhap moi van duoc
